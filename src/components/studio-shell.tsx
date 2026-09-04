@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 
 const NAV: Array<{ href: string; label: string; section: ChecklistItem["section"] | null }> = [
   { href: "/course", label: "Course setup", section: "course" },
+  { href: "/attendance", label: "Import attendance", section: null },
   { href: "/participants", label: "Participants & attendance", section: "participants" },
   { href: "/grades", label: "Grades", section: "grades" },
   { href: "/survey", label: "Survey", section: "survey" },
@@ -72,7 +73,7 @@ function SaveIndicator() {
 
 export function StudioShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { draft, loading, error, startNewDraft } = useDraft();
+  const { draft, loading, error, startNewDraft, lastExport } = useDraft();
 
   if (loading) {
     return <p className="p-8 text-sm text-muted-foreground">Loading draft…</p>;
@@ -81,6 +82,26 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
   if (!draft) {
     return (
       <div className="mx-auto flex min-h-screen max-w-lg flex-col justify-center gap-4 p-8">
+        {lastExport ? (
+          <div
+            className="rounded-lg border border-emerald-600/40 p-4"
+            data-testid="last-export"
+          >
+            <p className="text-sm font-medium">Report finalized</p>
+            <p className="mt-1 text-sm">
+              Written to{" "}
+              <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                output/{lastExport.directory}/
+              </code>
+            </p>
+            <ul className="mt-1 text-sm text-muted-foreground">
+              {lastExport.files.map((file) => (
+                <li key={file}>· {file}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
         <h1 className="text-xl font-semibold">No report in progress</h1>
         <p className="text-sm text-muted-foreground">
           Start a new report to begin entering course details, participants, grades, survey

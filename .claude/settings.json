@@ -23,6 +23,17 @@
         ]
       }
     ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "agent",
+            "model": "haiku",
+            "prompt": "Read .claude/agents/report-auditor.md and carry out the audit it describes, against this repository. That file is the single source of truth for what to check; do not audit anything outside it. You are read-only: report findings, never edit. Be brief - if nothing is wrong, say so in one line."
+          }
+        ]
+      }
+    ],
     "SessionStart": [
       {
         "matcher": "startup|resume|clear|compact",

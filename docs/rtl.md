@@ -13,6 +13,46 @@ opens the finished bytes and asserts the flags are really there.
 
 Run it with `pnpm verify:rtl`. It exits non-zero on a missing flag.
 
+## What the rules do, seen
+
+**These are not screenshots of Excel.** Nothing in this environment can open
+an `.xlsx`, and pretending otherwise would be the exact kind of claim this
+document exists to avoid. The sheet below is reproduced in a browser from the
+same fixture data the renderer uses, with and without the two rules under
+discussion — X1 (sheet direction) and X3 (reading order rather than physical
+alignment). Regenerate with `pnpm docs:images`.
+
+The real change is the XML, and that is quoted underneath.
+
+**Before** — no sheet direction; cells pinned physically to the right:
+
+![Participants table with no RTL rules applied](images/rtl-before.png)
+
+**After** — `rightToLeft` on the sheet view, `readingOrder` on the cells:
+
+![The same table with the RTL rules applied](images/rtl-after.png)
+
+Two things changed. The name column moved from the left edge to the right and
+the columns now run leftwards — that is X1, and it is the whole sheet, not a
+per-cell setting. And the outlined row, the Latin-script participant name,
+now sits correctly *inside* the mirrored column instead of fighting a
+hard-coded right alignment — that is X3.
+
+In the produced workbook the difference is one attribute per sheet:
+
+```diff
+  <worksheet …>
+    <sheetViews>
+-     <sheetView workbookViewId="0">
++     <sheetView workbookViewId="0" rightToLeft="1">
+        <pane xSplit="1" ySplit="1" topLeftCell="B2" state="frozen"/>
+      </sheetView>
+    </sheetViews>
+```
+
+One attribute, five sheets, and no way to see it in a code review. Which is
+the argument for `pnpm verify:rtl`.
+
 ## The one idea behind all of it
 
 **Set direction, then let the renderer decide the edge. Never set the edge

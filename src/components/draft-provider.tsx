@@ -42,6 +42,12 @@ const DEBOUNCE_MS = 500;
 
 export type SaveState = "idle" | "pending" | "saving" | "saved" | "error";
 
+/** Where the last finalized package went. Outlives the draft on purpose. */
+export interface ExportRecord {
+  directory: string;
+  files: string[];
+}
+
 interface DraftContextValue {
   draft: Draft | null;
   loading: boolean;
@@ -62,6 +68,16 @@ interface DraftContextValue {
    * though the user had thrown the report away.
    */
   clearLocalDraft: () => void;
+  /**
+   * The last package written in this session, or null.
+   *
+   * Held here rather than on the review screen because finalize deletes the
+   * draft, and the screen that showed the confirmation is unmounted the
+   * moment that happens — taking the output path with it, at exactly the
+   * moment someone needs to know where their files went.
+   */
+  lastExport: ExportRecord | null;
+  recordExport: (record: ExportRecord) => void;
 }
 
 const DraftContext = createContext<DraftContextValue | null>(null);
@@ -102,6 +118,7 @@ export function DraftProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [lastExport, setLastExport] = useState<ExportRecord | null>(null);
 
   // The newest draft, readable from timers and event handlers that close over
   // a stale render.
@@ -229,6 +246,7 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     setSaveState("saving");
     try {
       const stored = await putDraft(createEmptyDraft());
+      setLastExport(null);
       latest.current = stored;
       version.current += 1;
       setDraft(stored);
@@ -239,6 +257,10 @@ export function DraftProvider({ children }: { children: ReactNode }) {
       setSaveState("error");
       setError(cause instanceof Error ? cause.message : String(cause));
     }
+  }, []);
+
+  const recordExport = useCallback((record: ExportRecord) => {
+    setLastExport(record);
   }, []);
 
   const clearLocalDraft = useCallback(() => {
@@ -284,6 +306,8 @@ export function DraftProvider({ children }: { children: ReactNode }) {
       startNewDraft,
       discardDraft,
       clearLocalDraft,
+      lastExport,
+      recordExport,
     }),
     [
       draft,
@@ -296,6 +320,8 @@ export function DraftProvider({ children }: { children: ReactNode }) {
       startNewDraft,
       discardDraft,
       clearLocalDraft,
+      lastExport,
+      recordExport,
     ],
   );
 

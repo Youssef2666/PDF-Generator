@@ -48,7 +48,7 @@ type FinalizeState =
  * an export fails is whether their work is gone.
  */
 function FinalizeCard({ ready }: { ready: boolean }) {
-  const { saveState, flush, clearLocalDraft } = useDraft();
+  const { saveState, flush, clearLocalDraft, recordExport } = useDraft();
   const [state, setState] = useState<FinalizeState>({ phase: "idle" });
 
   const busy = state.phase === "running";
@@ -75,8 +75,10 @@ function FinalizeCard({ ready }: { ready: boolean }) {
       }
 
       setState({ phase: "done", directory: body.directory, files: body.files });
-      // The export route consumed the draft; drop our copy so the editor
-      // returns to its empty state.
+      // Record it on the provider *before* dropping the draft. Clearing the
+      // draft unmounts this screen, so a confirmation held only here would
+      // vanish along with the path it was reporting.
+      recordExport({ directory: body.directory, files: body.files });
       clearLocalDraft();
     } catch (error) {
       setState({

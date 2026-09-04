@@ -2,23 +2,32 @@
 
 ## Skills, subagents, commands and hooks
 
-<!-- TODO(M7): populate as each is added. docs/agents.md is the full reference;
-     this section is only an index so a session knows what exists. -->
+Full reference, with each one's boundary and why it uses the handler type it
+does: **docs/agents.md**. This is only an index.
 
-**Skills** — none yet.
-- TODO(M4): `.claude/skills/office-rtl/` — RTL rules for docx/xlsx/pptx output.
-- TODO(M6): `.claude/skills/pdf-attendance/` — the PDF extraction workflow.
+**Skills**
+- `.claude/skills/office-rtl/` — Word, Excel and PowerPoint RTL rules, each
+  with the symptom it fixes. Written to stand alone; knows nothing about this
+  project.
+- `.claude/skills/pdf-attendance/` — the extraction workflow: writing a
+  profile for a new client layout, the failure modes, and the rules governing
+  the model fallback.
 
-**Subagents** — none yet.
-- TODO(M7): `.claude/agents/report-auditor.md` — read-only draft auditor.
-- TODO(M7): `.claude/agents/rtl-reviewer.md` — reviews RTL correctness.
+**Subagents**
+- `.claude/agents/report-auditor.md` — read-only audit of the draft's
+  invariants. Also the target of the `Stop` hook.
+- `.claude/agents/rtl-reviewer.md` — reviews renderer changes against the RTL
+  catalogue. Starts by running `pnpm verify:rtl`.
 
-**Commands** — none yet.
-- TODO(M7): `/adr`, `/fixture`.
+**Commands**
+- `/adr <decision>` — write an ADR, with the rejected options.
+- `/fixture` — regenerate the fixtures and run what depends on them.
 
-**Hooks** — one registered.
-- `SessionStart` → `.claude/hooks/session-context.sh`. Reports whether a draft
-  exists and whether the dev server is up.
-- TODO(M1): `PostToolUse` (http) draft validation; `PreToolUse` (command)
-  protect-uploads.
-- TODO(M7): `Stop` → report-auditor.
+**Hooks** — four, using three handler types on purpose.
+- `PostToolUse` (http) → `/api/hooks/validate-draft`. Validates the draft
+  after any Edit or Write. **Inert when the dev server is down.**
+- `PreToolUse` (command) → `protect-uploads.mjs`. Refuses writes into
+  `data/uploads/`; must hold with no server running, hence a command hook.
+- `Stop` (agent) → the report auditor.
+- `SessionStart` (command) → `session-context.sh`. Reports whether a draft
+  exists and whether localhost:3000 responds.

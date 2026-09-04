@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "id": "al-ufuq-register-v1",
+  "name": "Al-Ufuq Industries attendance register",
+  "description": "Landscape A4 register: name and department on the left, one column per session date on the right, single-letter marks. Contains layout only — no names, no dates, no attendance values.",
+  "origin": "committed",
+  "page": 1,
+  "header": {
+    "contains": ["الاسم"],
+    "minSessionColumns": 2
+  },
+  "columns": {
+    "name": { "xMin": 40, "xMax": 240 },
+    "department": { "xMin": 241, "xMax": 380 },
+    "sessions": {
+      "xMin": 381,
+      "xMax": 820,
+      "headerPattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "markTolerance": 30
+    }
+  },
+  "rowRules": {
+    "stopBefore": ["إجمالي"],
+    "minNameLength": 3
+  },
+  "marks": {
+    "ح": "present",
+    "غ": "absent",
+    "م": "late",
+    "ع": "excused"
+  },
+  "defaultSession": {
+    "startTime": "09:00",
+    "endTime": "12:00",
+    "durationHours": 3
+  }
+}
