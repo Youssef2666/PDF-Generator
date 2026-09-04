@@ -1,0 +1,515 @@
+{
+  "schemaVersion": 1,
+  "id": "demo-0000-4000-8000-demodraft0001",
+  "createdAt": "2026-02-08T06:00:00.000Z",
+  "updatedAt": "2026-02-13T14:20:00.000Z",
+  "course": {
+    "titleAr": "مهارات القيادة الإدارية الحديثة",
+    "titleEn": "Modern Managerial Leadership Skills",
+    "code": "LDR-204",
+    "clientNameAr": "شركة الأفق للصناعات",
+    "clientNameEn": "Al-Ufuq Industries",
+    "trainerNameAr": "د. سامي الحارثي",
+    "trainerNameEn": "Dr. Sami Al-Harthi",
+    "venue": "قاعة التدريب الرئيسية — مقر العميل",
+    "deliveryMode": "in-person",
+    "startDate": "2026-02-08",
+    "endDate": "2026-02-12",
+    "passing": {
+      "minScore": 60,
+      "minAttendanceRate": 75
+    }
+  },
+  "sessions": [
+    {
+      "id": "s1",
+      "index": 1,
+      "date": "2026-02-08",
+      "startTime": "09:00",
+      "endTime": "12:00",
+      "durationHours": 3,
+      "topicAr": "مقدمة في القيادة الإدارية",
+      "topicEn": null
+    },
+    {
+      "id": "s2",
+      "index": 2,
+      "date": "2026-02-09",
+      "startTime": "09:00",
+      "endTime": "12:00",
+      "durationHours": 3,
+      "topicAr": "أنماط القيادة واتخاذ القرار",
+      "topicEn": null
+    },
+    {
+      "id": "s3",
+      "index": 3,
+      "date": "2026-02-10",
+      "startTime": "09:00",
+      "endTime": "13:00",
+      "durationHours": 4,
+      "topicAr": "إدارة فرق العمل والتحفيز",
+      "topicEn": null
+    },
+    {
+      "id": "s4",
+      "index": 4,
+      "date": "2026-02-11",
+      "startTime": "09:00",
+      "endTime": "12:00",
+      "durationHours": 3,
+      "topicAr": "إدارة الأداء والتغذية الراجعة",
+      "topicEn": null
+    },
+    {
+      "id": "s5",
+      "index": 5,
+      "date": "2026-02-12",
+      "startTime": "09:00",
+      "endTime": "12:00",
+      "durationHours": 3,
+      "topicAr": "التخطيط الاستراتيجي وعرض المشاريع",
+      "topicEn": null
+    }
+  ],
+  "gradeColumns": [
+    {
+      "id": "g1",
+      "labelAr": "الاختبار القبلي",
+      "labelEn": "Pre-assessment",
+      "maxScore": 20,
+      "weight": 20
+    },
+    {
+      "id": "g2",
+      "labelAr": "التمارين التطبيقية",
+      "labelEn": "Applied exercises",
+      "maxScore": 30,
+      "weight": 30
+    },
+    {
+      "id": "g3",
+      "labelAr": "المشروع الختامي",
+      "labelEn": "Final project",
+      "maxScore": 50,
+      "weight": 50
+    }
+  ],
+  "participants": [
+    {
+      "id": "p1",
+      "nameAr": "عبدالله بن ناصر القحطاني",
+      "nameEn": null,
+      "jobTitle": "مدير عمليات",
+      "department": "العمليات",
+      "attendance": {
+        "s1": "present",
+        "s2": "present",
+        "s3": "present",
+        "s4": "present",
+        "s5": "present"
+      },
+      "grades": {
+        "g1": 18,
+        "g2": 27,
+        "g3": 46
+      },
+      "outcomeOverride": null,
+      "outcomeOverrideNote": null,
+      "computed": {
+        "presentCount": 5,
+        "lateCount": 0,
+        "absentCount": 0,
+        "excusedCount": 0,
+        "attendedCount": 5,
+        "countedCount": 5,
+        "attendanceRate": 100,
+        "attendedHours": 16,
+        "totalScore": 91,
+        "computedOutcome": "passed",
+        "outcome": "passed",
+        "outcomeIsOverridden": false
+      }
+    },
+    {
+      "id": "p2",
+      "nameAr": "نورة عبدالعزيز الدوسري",
+      "nameEn": null,
+      "jobTitle": "أخصائي موارد بشرية أول",
+      "department": "الموارد البشرية",
+      "attendance": {
+        "s1": "present",
+        "s2": "late",
+        "s3": "present",
+        "s4": "present",
+        "s5": "present"
+      },
+      "grades": {
+        "g1": 16,
+        "g2": 25,
+        "g3": 42
+      },
+      "outcomeOverride": null,
+      "outcomeOverrideNote": null,
+      "computed": {
+        "presentCount": 4,
+        "lateCount": 1,
+        "absentCount": 0,
+        "excusedCount": 0,
+        "attendedCount": 5,
+        "countedCount": 5,
+        "attendanceRate": 100,
+        "attendedHours": 16,
+        "totalScore": 83,
+        "computedOutcome": "passed",
+        "outcome": "passed",
+        "outcomeIsOverridden": false
+      }
+    },
+    {
+      "id": "p3",
+      "nameAr": "Maria Santos",
+      "nameEn": "Maria Santos",
+      "jobTitle": "Quality Assurance Lead",
+      "department": "الجودة",
+      "attendance": {
+        "s1": "present",
+        "s2": "present",
+        "s3": "late",
+        "s4": "present",
+        "s5": "present"
+      },
+      "grades": {
+        "g1": 17,
+        "g2": 28,
+        "g3": 44
+      },
+      "outcomeOverride": null,
+      "outcomeOverrideNote": null,
+      "computed": {
+        "presentCount": 4,
+        "lateCount": 1,
+        "absentCount": 0,
+        "excusedCount": 0,
+        "attendedCount": 5,
+        "countedCount": 5,
+        "attendanceRate": 100,
+        "attendedHours": 16,
+        "totalScore": 89,
+        "computedOutcome": "passed",
+        "outcome": "passed",
+        "outcomeIsOverridden": false
+      }
+    },
+    {
+      "id": "p4",
+      "nameAr": "فهد سعد العتيبي",
+      "nameEn": null,
+      "jobTitle": "مشرف إنتاج",
+      "department": "الإنتاج",
+      "attendance": {
+        "s1": "late",
+        "s2": "late",
+        "s3": "late",
+        "s4": "late",
+        "s5": "late"
+      },
+      "grades": {
+        "g1": 14,
+        "g2": 22,
+        "g3": 38
+      },
+      "outcomeOverride": null,
+      "outcomeOverrideNote": null,
+      "computed": {
+        "presentCount": 0,
+        "lateCount": 5,
+        "absentCount": 0,
+        "excusedCount": 0,
+        "attendedCount": 5,
+        "countedCount": 5,
+        "attendanceRate": 100,
+        "attendedHours": 16,
+        "totalScore": 74,
+        "computedOutcome": "passed",
+        "outcome": "passed",
+        "outcomeIsOverridden": false
+      }
+    },
+    {
+      "id": "p5",
+      "nameAr": "هند محمد الشمري",
+      "nameEn": null,
+      "jobTitle": "محلل مالي",
+      "department": "المالية",
+      "attendance": {
+        "s1": "present",
+        "s2": "present",
+        "s3": "excused",
+        "s4": "present",
+        "s5": "present"
+      },
+      "grades": {
+        "g1": 19,
+        "g2": 29,
+        "g3": 47
+      },
+      "outcomeOverride": null,
+      "outcomeOverrideNote": null,
+      "computed": {
+        "presentCount": 4,
+        "lateCount": 0,
+        "absentCount": 0,
+        "excusedCount": 1,
+        "attendedCount": 4,
+        "countedCount": 4,
+        "attendanceRate": 100,
+        "attendedHours": 12,
+        "totalScore": 95,
+        "computedOutcome": "passed",
+        "outcome": "passed",
+        "outcomeIsOverridden": false
+      }
+    },
+    {
+      "id": "p6",
+      "nameAr": "خالد إبراهيم الزهراني",
+      "nameEn": null,
+      "jobTitle": "مهندس صيانة",
+      "department": "الصيانة",
+      "attendance": {
+        "s1": "present",
+        "s2": "absent",
+        "s3": "absent",
+        "s4": "present",
+        "s5": "absent"
+      },
+      "grades": {
+        "g1": 15,
+        "g2": 24,
+        "g3": 40
+      },
+      "outcomeOverride": null,
+      "outcomeOverrideNote": null,
+      "computed": {
+        "presentCount": 2,
+        "lateCount": 0,
+        "absentCount": 3,
+        "excusedCount": 0,
+        "attendedCount": 2,
+        "countedCount": 5,
+        "attendanceRate": 40,
+        "attendedHours": 6,
+        "totalScore": 79,
+        "computedOutcome": "failed",
+        "outcome": "failed",
+        "outcomeIsOverridden": false
+      }
+    },
+    {
+      "id": "p7",
+      "nameAr": "ريم فيصل المطيري",
+      "nameEn": null,
+      "jobTitle": "منسق مشاريع",
+      "department": "إدارة المشاريع",
+      "attendance": {
+        "s1": "present",
+        "s2": "present",
+        "s3": "present",
+        "s4": "late",
+        "s5": "present"
+      },
+      "grades": {
+        "g1": 9,
+        "g2": 14,
+        "g3": 22
+      },
+      "outcomeOverride": null,
+      "outcomeOverrideNote": null,
+      "computed": {
+        "presentCount": 4,
+        "lateCount": 1,
+        "absentCount": 0,
+        "excusedCount": 0,
+        "attendedCount": 5,
+        "countedCount": 5,
+        "attendanceRate": 100,
+        "attendedHours": 16,
+        "totalScore": 45,
+        "computedOutcome": "failed",
+        "outcome": "failed",
+        "outcomeIsOverridden": false
+      }
+    },
+    {
+      "id": "p8",
+      "nameAr": "ماجد عبدالرحمن الحربي",
+      "nameEn": null,
+      "jobTitle": "رئيس قسم المشتريات",
+      "department": "المشتريات",
+      "attendance": {
+        "s1": "present",
+        "s2": "present",
+        "s3": "present",
+        "s4": "absent",
+        "s5": "absent"
+      },
+      "grades": {
+        "g1": 16,
+        "g2": 26,
+        "g3": 20
+      },
+      "outcomeOverride": "passed",
+      "outcomeOverrideNote": "تعذّر حضور الجلستين الأخيرتين لظرف عمل موثّق، وأكمل المشارك تقييماً بديلاً بإشراف المدرب.",
+      "computed": {
+        "presentCount": 3,
+        "lateCount": 0,
+        "absentCount": 2,
+        "excusedCount": 0,
+        "attendedCount": 3,
+        "countedCount": 5,
+        "attendanceRate": 60,
+        "attendedHours": 10,
+        "totalScore": 62,
+        "computedOutcome": "failed",
+        "outcome": "passed",
+        "outcomeIsOverridden": true
+      }
+    }
+  ],
+  "survey": {
+    "scaleMax": 5,
+    "questions": [
+      {
+        "id": "q1",
+        "textAr": "وضوح أهداف البرنامج التدريبي",
+        "textEn": "Clarity of programme objectives",
+        "tally": [
+          0,
+          0,
+          1,
+          3,
+          4
+        ],
+        "computed": {
+          "responseCount": 8,
+          "average": 4.4
+        }
+      },
+      {
+        "id": "q2",
+        "textAr": "جودة المادة العلمية المقدمة",
+        "textEn": "Quality of the material",
+        "tally": [
+          0,
+          0,
+          2,
+          4,
+          2
+        ],
+        "computed": {
+          "responseCount": 8,
+          "average": 4
+        }
+      },
+      {
+        "id": "q3",
+        "textAr": "كفاءة المدرب وأسلوب العرض",
+        "textEn": "Trainer competence and delivery",
+        "tally": [
+          0,
+          0,
+          0,
+          2,
+          6
+        ],
+        "computed": {
+          "responseCount": 8,
+          "average": 4.8
+        }
+      },
+      {
+        "id": "q4",
+        "textAr": "ملاءمة مدة البرنامج للمحتوى",
+        "textEn": "Suitability of the programme duration",
+        "tally": [
+          0,
+          1,
+          3,
+          3,
+          1
+        ],
+        "computed": {
+          "responseCount": 8,
+          "average": 3.5
+        }
+      },
+      {
+        "id": "q5",
+        "textAr": "مستوى التفاعل والأنشطة العملية",
+        "textEn": "Interaction and practical activities",
+        "tally": [
+          0,
+          0,
+          1,
+          4,
+          3
+        ],
+        "computed": {
+          "responseCount": 8,
+          "average": 4.3
+        }
+      },
+      {
+        "id": "q6",
+        "textAr": "إمكانية تطبيق المهارات في بيئة العمل",
+        "textEn": "Applicability of the skills at work",
+        "tally": [
+          0,
+          0,
+          2,
+          3,
+          3
+        ],
+        "computed": {
+          "responseCount": 8,
+          "average": 4.1
+        }
+      }
+    ],
+    "computed": {
+      "overallAverage": 4.2,
+      "responseCount": 8,
+      "answeredQuestionCount": 6
+    }
+  },
+  "narrative": {
+    "executiveSummary": "نُفِّذ برنامج «مهارات القيادة الإدارية الحديثة» خلال الفترة من 8 إلى 12 فبراير 2026 بمقر العميل، بمشاركة ثمانية من شاغلي الوظائف الإشرافية والقيادية. بلغ إجمالي الساعات التدريبية 16 ساعة موزعة على خمس جلسات، وحقق البرنامج معدل حضور إجمالياً مرتفعاً ومستوى رضا عاماً تجاوز التوقعات المحددة في خطة التنفيذ.",
+    "objectives": "استهدف البرنامج تمكين المشاركين من تحديد نمطهم القيادي وتطويره، وبناء قدرتهم على اتخاذ القرار في ظروف الغموض، وإكسابهم أدوات عملية لإدارة الأداء وتقديم التغذية الراجعة البنّاءة، إضافة إلى ربط الممارسات القيادية اليومية بالتوجه الاستراتيجي للمنشأة.",
+    "methodology": "اعتمد التنفيذ على مزيج من العرض النظري الموجز وورش العمل التطبيقية ودراسات الحالة المستمدة من بيئة عمل العميل. خُصص ما لا يقل عن نصف الزمن التدريبي للأنشطة التفاعلية، وأُجري تقييم قبلي في الجلسة الأولى لقياس خط الأساس، وتقييم ختامي عبر مشروع جماعي عُرض في الجلسة الخامسة.",
+    "contentSummary": "غطّت الجلسات خمسة محاور متتابعة: مقدمة في القيادة الإدارية، وأنماط القيادة واتخاذ القرار، وإدارة فرق العمل والتحفيز، وإدارة الأداء والتغذية الراجعة، وأخيراً التخطيط الاستراتيجي وعرض المشاريع الختامية. رُبط كل محور بتمرين تطبيقي مستقل يُقيَّم ضمن درجة التمارين التطبيقية.",
+    "participantFeedback": "أظهرت نتائج استبانة التقييم رضاً مرتفعاً عن كفاءة المدرب وأسلوب العرض، وهو المحور الأعلى تقييماً في الاستبانة. وسجّل محور ملاءمة مدة البرنامج للمحتوى أدنى المتوسطات، حيث أشار عدد من المشاركين إلى الحاجة إلى وقت إضافي لمحور إدارة الأداء تحديداً.",
+    "trainerObservations": "لوحظ تفاعل ملموس من المشاركين في الأنشطة الجماعية، وتحسّن واضح في صياغة أهداف الأداء بين الجلسة الثانية والجلسة الرابعة. واجه بعض المشاركين صعوبة في التمييز بين التغذية الراجعة التقويمية والتطويرية في بداية البرنامج، وقد عولج ذلك عبر تمرين إضافي غير مجدول في الجلسة الرابعة.",
+    "recommendations": "يُوصى بزيادة الزمن المخصص لمحور إدارة الأداء بمقدار ساعتين في الدورات القادمة، وبإضافة جلسة متابعة بعد ستة أسابيع لقياس أثر التدريب في بيئة العمل الفعلية. كما يُوصى بتزويد المشاركين بدليل مرجعي مختصر لنماذج التغذية الراجعة قبل انطلاق البرنامج.",
+    "conclusion": "حقق البرنامج أهدافه المعتمدة في أمر التدريب رقم 20260208114500 الصادر عن إدارة التطوير، واجتاز ستة من أصل ثمانية مشاركين متطلبات النجاح المقررة. تُرفع نتائج التقييم التفصيلية ضمن ملحقات هذا التقرير لاتخاذ ما يلزم بشأن خطط التطوير الفردية."
+  },
+  "provenance": {
+    "attendanceSource": "manual",
+    "profileId": null,
+    "confidence": null,
+    "sourceFilename": null,
+    "extractedAt": null,
+    "humanConfirmed": true
+  },
+  "computed": {
+    "sessionCount": 5,
+    "participantCount": 8,
+    "totalHours": 16,
+    "passedCount": 6,
+    "failedCount": 2,
+    "incompleteCount": 0,
+    "averageAttendanceRate": 87.5,
+    "averageTotalScore": 77.3,
+    "totalGradeWeight": 100
+  }
+}

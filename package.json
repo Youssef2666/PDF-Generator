@@ -10,7 +10,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "fixture": "tsx scripts/make-demo-fixture.ts"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
@@ -21,17 +24,21 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "shadcn": "^4.21.0",
-    "tw-animate-css": "^1.4.0"
+    "tw-animate-css": "^1.4.0",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/coverage-v8": "^5.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "tsx": "^4.23.13",
+    "typescript": "^5",
+    "vitest": "^5.0.0"
   },
   "packageManager": "pnpm@10.34.5"
 }
