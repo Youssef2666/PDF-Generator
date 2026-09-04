@@ -140,6 +140,37 @@ follow the **effective** outcome.
 deliberately does **not** touch `updatedAt` — the store owns that timestamp.
 That is what makes the whole module trivially testable.
 
+### The finalize checklist (F7)
+
+`computeChecklist(draft)` lives in `compute.ts` for the same reason as
+everything else here: the review screen and the export gate must not be able
+to disagree about whether a report is finished. It is derived on demand and
+never stored.
+
+Items are **required** (they gate finalize) or **advisory** (reported, but
+someone's call):
+
+| Item | Gate |
+| --- | --- |
+| Course, client and trainer named in Arabic | required |
+| Start and end dates set and in order | required |
+| At least one session; every session has hours | required |
+| At least one participant | required |
+| Attendance recorded for every participant × session | required |
+| At least one grade column; weights total 100 | required |
+| Every participant fully marked | required |
+| No participant left `incomplete` | required |
+| At least one survey question | required |
+| Every narrative section written | required |
+| Every participant has a job title and department | advisory |
+| Every survey question has responses | advisory |
+
+Two deliberate choices. An **unanswered survey question is advisory**: it
+renders honestly as "no data", and a question genuinely nobody answered
+should not block a report. An **override does not satisfy the grades rule**
+— a participant can be overridden to `passed` while `grades-complete` still
+fails, because the override settles the outcome, not the missing mark.
+
 ## Assumptions to reconcile against PRD §9
 
 | # | Assumption | Risk if §9 differs |

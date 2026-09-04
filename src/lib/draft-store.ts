@@ -25,7 +25,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { recomputeDraft } from "@/lib/compute";
-import { DraftSchema, SCHEMA_VERSION, summariseZodError, type Draft } from "@/lib/schema";
+import { DraftSchema, summariseZodError, type Draft } from "@/lib/schema";
 
 /**
  * Where drafts live. Resolved per call rather than frozen at import time so
@@ -89,26 +89,10 @@ export function prepareDraft(input: unknown, now: Date = new Date()): Draft {
   return { ...recomputeDraft(parsed.data), updatedAt: now.toISOString() };
 }
 
-/** A valid, empty draft. The starting point for a new report. */
-export function createEmptyDraft(now: Date = new Date()): Draft {
-  const timestamp = now.toISOString();
-  return prepareDraft(
-    {
-      schemaVersion: SCHEMA_VERSION,
-      id: randomUUID(),
-      createdAt: timestamp,
-      updatedAt: timestamp,
-      course: {},
-      sessions: [],
-      gradeColumns: [],
-      participants: [],
-      survey: {},
-      narrative: {},
-      provenance: {},
-    },
-    now,
-  );
-}
+// Re-exported so server-side callers have one obvious import for the whole
+// draft lifecycle. The implementation lives in a node-free module because the
+// editor needs it too — see empty-draft.ts.
+export { createEmptyDraft } from "@/lib/empty-draft";
 
 /**
  * The current draft, or null when there is none.

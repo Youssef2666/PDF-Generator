@@ -15,6 +15,7 @@ import type {
   Draft,
   DraftComputed,
   GradeColumn,
+  Narrative,
   Outcome,
   Participant,
   PassingRule,
@@ -343,4 +344,272 @@ export function recomputeDraft(draft: Draft): Draft {
   };
 
   return { ...draft, sessions, participants, survey, computed };
+}
+
+// ---------------------------------------------------------------------------
+// Finalize checklist (F7)
+// ---------------------------------------------------------------------------
+
+/**
+ * The readiness checklist lives here rather than in the review screen, for
+ * the same reason every other figure does: the UI renders derived values, it
+ * does not produce them. A checklist computed inside a component could
+ * disagree with what the export gate actually enforces, and the two would
+ * drift without anyone noticing.
+ *
+ * Readiness is deliberately not part of DraftSchema. A half-finished draft
+ * must still parse and save — see docs/data-model.md. These rules are what
+ * "finished" means; they are evaluated fresh on render and never stored.
+ */
+
+export type ChecklistStatus = "pass" | "fail";
+
+export interface ChecklistItem {
+  id: string;
+  /** What the reviewer needs to do, in plain terms. */
+  label: string;
+  status: ChecklistStatus;
+  /** Why it is failing, or confirmation of what was found. */
+  detail: string;
+  /**
+   * Required items gate finalize. Advisory items are reported but do not
+   * block: they flag things that are usually mistakes but are legitimately
+   * someone's call.
+   */
+  required: boolean;
+  /** The screen that fixes this item. */
+  section: "course" | "participants" | "grades" | "survey" | "narrative";
+}
+
+export interface ChecklistResult {
+  items: ChecklistItem[];
+  /** True when every required item passes. Gates the finalize button. */
+  ready: boolean;
+  requiredFailing: number;
+  advisoryFailing: number;
+}
+
+const NARRATIVE_LABELS: Record<keyof Narrative, string> = {
+  executiveSummary: "Executive summary",
+  objectives: "Objectives",
+  methodology: "Methodology",
+  contentSummary: "Content summary",
+  participantFeedback: "Participant feedback",
+  trainerObservations: "Trainer observations",
+  recommendations: "Recommendations",
+  conclusion: "Conclusion",
+};
+
+/** Evaluate every finalize rule against a draft. */
+export function computeChecklist(draft: Draft): ChecklistResult {
+  const items: ChecklistItem[] = [];
+
+  const add = (
+    id: string,
+    section: ChecklistItem["section"],
+    label: string,
+    ok: boolean,
+    detail: string,
+    required = true,
+  ) => {
+    items.push({ id, section, label, status: ok ? "pass" : "fail", detail, required });
+  };
+
+  // --- Course -------------------------------------------------------------
+  const { course } = draft;
+  const missingCourseFields = (
+    [
+      ["titleAr", "Arabic course title"],
+      ["clientNameAr", "Arabic client name"],
+      ["trainerNameAr", "Arabic trainer name"],
+    ] as const
+  )
+    .filter(([key]) => course[key].trim() === "")
+    .map(([, label]) => label);
+
+  add(
+    "course-identity",
+    "course",
+    "Course, client and trainer are named in Arabic",
+    missingCourseFields.length === 0,
+    missingCourseFields.length === 0
+      ? "All three are filled in."
+      : `Missing: ${missingCourseFields.join(", ")}.`,
+  );
+
+  const hasDates = course.startDate !== null && course.endDate !== null;
+  const datesOrdered = hasDates && course.startDate! <= course.endDate!;
+  add(
+    "course-dates",
+    "course",
+    "Start and end dates are set and in order",
+    datesOrdered,
+    !hasDates
+      ? "Both a start date and an end date are required."
+      : datesOrdered
+        ? `${course.startDate} to ${course.endDate}.`
+        : "The end date falls before the start date.",
+  );
+
+  // --- Sessions -----------------------------------------------------------
+  const sessionsWithHours = draft.sessions.filter((s) => s.durationHours > 0).length;
+  add(
+    "sessions-exist",
+    "course",
+    "At least one session",
+    draft.sessions.length > 0,
+    draft.sessions.length > 0
+      ? `${draft.sessions.length} sessions, ${draft.computed.totalHours} hours in total.`
+      : "Add sessions, or generate them in bulk from the date range.",
+  );
+
+  add(
+    "sessions-have-hours",
+    "course",
+    "Every session has credited hours",
+    draft.sessions.length > 0 && sessionsWithHours === draft.sessions.length,
+    draft.sessions.length === 0
+      ? "No sessions yet."
+      : sessionsWithHours === draft.sessions.length
+        ? "All sessions carry a duration."
+        : `${draft.sessions.length - sessionsWithHours} session(s) have zero hours.`,
+  );
+
+  // --- Participants -------------------------------------------------------
+  add(
+    "participants-exist",
+    "participants",
+    "At least one participant",
+    draft.participants.length > 0,
+    draft.participants.length > 0
+      ? `${draft.participants.length} participants.`
+      : "Add participants manually, or import an attendance PDF.",
+  );
+
+  const missingRoles = draft.participants.filter(
+    (p) => p.jobTitle.trim() === "" || p.department.trim() === "",
+  );
+  add(
+    "participants-roles",
+    "participants",
+    "Every participant has a job title and department",
+    missingRoles.length === 0,
+    missingRoles.length === 0
+      ? "All participants carry both."
+      : `${missingRoles.length} participant(s) are missing a job title or department.`,
+    false,
+  );
+
+  // --- Attendance ---------------------------------------------------------
+  const totalCells = draft.participants.length * draft.sessions.length;
+  const recordedCells = draft.participants.reduce(
+    (sum, p) => sum + draft.sessions.filter((s) => p.attendance[s.id] !== undefined).length,
+    0,
+  );
+  const attendanceComplete = totalCells > 0 && recordedCells === totalCells;
+  add(
+    "attendance-complete",
+    "participants",
+    "Attendance recorded for every participant and session",
+    attendanceComplete,
+    totalCells === 0
+      ? "Nothing to record yet."
+      : attendanceComplete
+        ? `All ${totalCells} cells recorded.`
+        : `${totalCells - recordedCells} of ${totalCells} cells are still blank.`,
+  );
+
+  // --- Grades -------------------------------------------------------------
+  add(
+    "grades-exist",
+    "grades",
+    "At least one grade column",
+    draft.gradeColumns.length > 0,
+    draft.gradeColumns.length > 0
+      ? `${draft.gradeColumns.length} columns.`
+      : "Add the columns this course is marked against.",
+  );
+
+  const weightOk = draft.gradeColumns.length > 0 && draft.computed.totalGradeWeight === 100;
+  add(
+    "grades-weights",
+    "grades",
+    "Grade weights total 100",
+    weightOk,
+    draft.gradeColumns.length === 0
+      ? "No columns to weight."
+      : weightOk
+        ? "Weights total 100."
+        : `Weights total ${draft.computed.totalGradeWeight}, not 100.`,
+  );
+
+  const unmarked = draft.participants.filter((p) => p.computed.totalScore === null);
+  add(
+    "grades-complete",
+    "grades",
+    "Every participant is fully marked",
+    draft.participants.length > 0 && unmarked.length === 0,
+    draft.participants.length === 0
+      ? "No participants yet."
+      : unmarked.length === 0
+        ? "All participants have a total score."
+        : `${unmarked.length} participant(s) have an unmarked column.`,
+  );
+
+  // --- Outcomes -----------------------------------------------------------
+  add(
+    "outcomes-decided",
+    "grades",
+    "No participant is left incomplete",
+    draft.participants.length > 0 && draft.computed.incompleteCount === 0,
+    draft.participants.length === 0
+      ? "No participants yet."
+      : draft.computed.incompleteCount === 0
+        ? `${draft.computed.passedCount} passed, ${draft.computed.failedCount} failed.`
+        : `${draft.computed.incompleteCount} participant(s) still resolve to incomplete.`,
+  );
+
+  // --- Survey -------------------------------------------------------------
+  add(
+    "survey-exists",
+    "survey",
+    "At least one survey question",
+    draft.survey.questions.length > 0,
+    draft.survey.questions.length > 0
+      ? `${draft.survey.questions.length} questions.`
+      : "Add the questions this cohort was asked.",
+  );
+
+  const unanswered = draft.survey.questions.filter((q) => q.computed.average === null);
+  add(
+    "survey-answered",
+    "survey",
+    "Every survey question has responses",
+    draft.survey.questions.length > 0 && unanswered.length === 0,
+    draft.survey.questions.length === 0
+      ? "No questions yet."
+      : unanswered.length === 0
+        ? `Overall average ${draft.survey.computed.overallAverage}.`
+        : `${unanswered.length} question(s) have no responses and will render as "no data".`,
+    false,
+  );
+
+  // --- Narrative ----------------------------------------------------------
+  const emptyNarrative = (Object.keys(NARRATIVE_LABELS) as Array<keyof Narrative>).filter(
+    (key) => draft.narrative[key].trim() === "",
+  );
+  add(
+    "narrative-complete",
+    "narrative",
+    "Every narrative section is written",
+    emptyNarrative.length === 0,
+    emptyNarrative.length === 0
+      ? "All eight sections are filled in."
+      : `Empty: ${emptyNarrative.map((k) => NARRATIVE_LABELS[k]).join(", ")}.`,
+  );
+
+  const requiredFailing = items.filter((i) => i.required && i.status === "fail").length;
+  const advisoryFailing = items.filter((i) => !i.required && i.status === "fail").length;
+
+  return { items, ready: requiredFailing === 0, requiredFailing, advisoryFailing };
 }
