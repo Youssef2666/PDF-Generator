@@ -374,38 +374,6 @@ export default function ReviewPage() {
       </Card>
 
       <FinalizeCard ready={checklist.ready} />
-
-      {process.env.NODE_ENV !== "production" ? (
-        <Card className="border-dashed">
-          <CardHeader>
-            <CardTitle className="text-base">Developer preview</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Temporary. Renders a single document and hands it straight back, for looking at
-              the output in real Office while it is being built. Not the export — no files are
-              written to output/ and the draft is untouched. Remove this card and
-              app/api/dev/ once the renderers are settled.
-            </p>
-            <div className="flex gap-2">
-              <Button variant="outline" asChild>
-                <a href="/api/dev/xlsx" download>
-                  Download Excel preview
-                </a>
-              </Button>
-              <Button variant="outline" asChild>
-                <a href="/api/dev/docx" download>
-                  Download Word preview
-                </a>
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Save the draft first if you have just edited something — the preview renders what
-              is on disk, not what is on screen.
-            </p>
-          </CardContent>
-        </Card>
-      ) : null}
     </div>
   );
 }

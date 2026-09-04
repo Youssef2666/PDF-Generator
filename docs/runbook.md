@@ -1,6 +1,6 @@
 # Runbook
 
-Three procedures, in the order you are likely to need them.
+Four procedures, in the order you are likely to need them.
 
 ---
 
@@ -137,6 +137,26 @@ The same check runs as a `PostToolUse` hook, so an agent editing the draft
 file directly is told immediately. If it is silent, check that the dev server
 is up — that hook is inert without it, which is why `SessionStart` reports
 the server's state.
+
+---
+
+## Look at the produced documents
+
+There is no in-app preview — the temporary one was removed when the export
+route landed. To get all three documents from the committed fixture without
+finalizing anything:
+
+```bash
+pnpm verify:rtl        # renders docx, xlsx and pptx, prints the directory
+```
+
+It writes them to a temp directory and reports the path, then asserts the RTL
+flags in what it wrote. To render from the *current* draft instead, use the
+snippet in "Debug a failed export" above.
+
+This matters because the flags are asserted but the appearance is not: no
+automated check in this project can tell you whether a document looks right
+in Word on macOS.
 
 ---
 
