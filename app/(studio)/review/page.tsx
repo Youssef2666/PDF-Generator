@@ -161,10 +161,14 @@ function FinalizeCard({ ready }: { ready: boolean }) {
 
 function Figure({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
   return (
-    <div className="rounded-lg border p-3">
-      <p className="text-xs text-muted-foreground">{label}</p>
+    <div className="rounded-xl border border-border bg-background p-4">
+      <p className="text-[11px] font-medium tracking-[0.06em] text-muted-foreground uppercase">
+        {label}
+      </p>
       <p
-        className={`text-lg font-semibold tabular-nums ${muted ? "text-muted-foreground" : ""}`}
+        className={`mt-1.5 text-2xl font-semibold tracking-tight tabular-nums ${
+          muted ? "text-muted-foreground" : "text-foreground"
+        }`}
       >
         {value}
       </p>
@@ -202,11 +206,11 @@ export default function ReviewPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <ul className="space-y-2">
+          <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-background">
             {required.map((item) => (
               <li
                 key={item.id}
-                className="flex items-start gap-3 rounded-md border p-3"
+                className="flex items-start gap-3 px-4 py-3"
                 data-testid={`check-${item.id}`}
                 data-status={item.status}
               >
@@ -241,11 +245,11 @@ export default function ReviewPage() {
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Advisory — reported, does not block finalize
               </p>
-              <ul className="space-y-2">
+              <ul className="divide-y divide-border overflow-hidden rounded-xl border border-dashed border-border bg-background">
                 {advisory.map((item) => (
                   <li
                     key={item.id}
-                    className="flex items-start gap-3 rounded-md border border-dashed p-3"
+                    className="flex items-start gap-3 px-4 py-3"
                     data-testid={`check-${item.id}`}
                     data-status={item.status}
                   >

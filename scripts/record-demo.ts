@@ -32,9 +32,16 @@ const frames: Uint8Array[] = [];
 const delays: number[] = [];
 
 async function capture(page: Page, delay = FRAME_MS): Promise<void> {
-  const png = PNG.sync.read(Buffer.from(await page.screenshot({ type: "png" })));
+  const bytes = Buffer.from(await page.screenshot({ type: "png" }));
+  const png = PNG.sync.read(bytes);
   frames.push(new Uint8Array(png.data));
   delays.push(delay);
+  // Each frame is also kept as a PNG, so the screens can be reviewed
+  // individually without decoding the GIF.
+  await fs.writeFile(
+    path.join(TMP, "frames", `${String(frames.length).padStart(2, "0")}.png`),
+    bytes,
+  );
   process.stdout.write(`  frame ${frames.length}\n`);
 }
 
@@ -88,7 +95,7 @@ async function stopServer(server: ChildProcess): Promise<void> {
 
 async function main(): Promise<void> {
   await fs.rm(TMP, { recursive: true, force: true });
-  await fs.mkdir(TMP, { recursive: true });
+  await fs.mkdir(path.join(TMP, "frames"), { recursive: true });
 
   console.log(`Starting a dev server on ${PORT} with its own data directory…`);
   // detached so the whole tree can be signalled as a group; without this the
@@ -152,7 +159,9 @@ async function main(): Promise<void> {
     await capture(page);
 
     // Scrolled to the figures panel.
-    await page.getByText("Computed figures").scrollIntoViewIfNeeded();
+    // exact: the page header's description also mentions "computed figures",
+    // and getByText's default substring match would find both.
+    await page.getByText("Computed figures", { exact: true }).scrollIntoViewIfNeeded();
     await capture(page);
 
     // 6 — finalize

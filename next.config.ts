@@ -11,6 +11,12 @@ const nextConfig: NextConfig = {
    * route 422s. Keeping the package external restores ordinary resolution.
    */
   serverExternalPackages: ["pdfjs-dist"],
+
+  /**
+   * The floating dev badge sits over the sidebar's readiness card and ends
+   * up in every recorded frame. Build status is still on the terminal.
+   */
+  devIndicators: false,
 };
 
 export default nextConfig;
