@@ -126,15 +126,164 @@ and the physical position deliberately differ.
 
 ## Word (`src/render/docx.ts`)
 
-Arrives in M4. The rule catalogue from
-[muhmoosa/claude-arabic-docs](https://github.com/muhmoosa/claude-arabic-docs)
-is the reference to work from — that project hardens `python-docx` for
-Arabic, so the code does not transfer to the `docx` npm package, but the
-rules do. Credit belongs there.
+Word RTL is **six independent layers**, not one flag. A document with five of
+six looks *almost* right, which is worse than obviously broken — nobody
+notices until a client does.
+
+The layer model, the `themeFontLang` master switch and the Word-for-Mac
+alignment rule are adapted from
+[muhmoosa/claude-arabic-docs](https://github.com/muhmoosa/claude-arabic-docs),
+an Arabic RTL hardening skill for `python-docx`. The code does not transfer to
+the `docx` npm package; the rule catalogue does, and it saved a great deal of
+discovery. Credit belongs there.
+
+| Layer | Where | What | Verifier |
+| --- | --- | --- | --- |
+| 0.0 | `word/settings.xml` | `<w:themeFontLang w:bidi="ar-SA"/>` | D1 |
+| 0 | docDefaults `rPr` | `<w:lang w:bidi="ar-SA"/>` | D2 |
+| 0.5 | docDefaults `pPr` | `<w:bidi/>` + `<w:jc w:val="start"/>` | D3 |
+| 1 | `<w:sectPr>` | `<w:bidi/>` before `<w:docGrid>` | D4, D5 |
+| 2 | `<w:tblPr>` | `<w:bidiVisual/>` | D6 |
+| 3 | `<w:pPr>` / `<w:rPr>` | `<w:bidi/>` / `<w:rtl/>` | D7, D8 |
+| — | runs | `w:cs` font + `w:szCs` size | D9 |
+| 5 | `<w:jc>` | `start`/`end`, never `left`/`right` | D10 |
+
+### R1 — `themeFontLang` is the master switch
+
+**Symptom without it:** everything else is decoration. Word does not enable
+its bidi pipeline at all, and paragraphs render left-aligned no matter how
+many other flags are set.
+
+**Why it is easy to miss:** no document-generation library writes it. Only a
+live Word session populates it, from the OS keyboard layout — so a file a
+human made in Word works, yours does not, and the XML looks identical
+everywhere you thought to look.
+
+### R2 — Three layers have no API in `docx` 9.7.1
+
+`visuallyRightToLeft`, `bidirectional`, `rightToLeft`, `AlignmentType.START`,
+`font.cs` and `sizeComplexScript` all exist. These three do not:
+
+- **layer 1** — `ISectionPropertiesOptionsBase` has no `bidi` field
+- **layer 0.5** — `IParagraphStylePropertiesOptions` has no `bidirectional`
+- **layer 0.0** — nothing writes `settings.xml`
+
+`hardenRtl()` in `src/render/docx.ts` unzips the finished package, patches the
+XML and re-zips. Two ordering constraints, both of which make Word report the
+file as *corrupt* rather than merely wrong:
+
+- `<w:bidi/>` before `<w:docGrid>` inside `<w:sectPr>`
+- `<w:bidi/>` before `<w:jc>` inside `<w:pPr>`
+
+### R3 — Complex-script font *and* size
+
+Word keeps two font slots and two size slots per run. `w:cs` is the one it
+uses for Arabic, and `w:szCs` is the size it uses for it.
+
+**Symptom without `w:cs`:** Arabic falls back to whatever the reader's machine
+picks, so the same file looks different on Windows and macOS.
+**Symptom without `w:szCs`:** the Arabic renders at the default size while the
+Latin text obeys the size you set.
+
+### R4 — Logical alignment, the Word-for-Mac trap
+
+`w:jc="start"` / `"end"`, never `left` / `right`.
+
+**Symptom:** correct on Windows, wrong on macOS. Word for Mac reinterprets
+physical alignment under RTL, so pinning a paragraph `right` — the obvious fix
+when Arabic looks left-aligned — resolves to the wrong side on one platform.
+Only cross-platform testing finds this, which is why the verifier fails the
+build on any physical `w:jc`.
+
+### R5 — Direction is chosen per value, not per column
+
+The roster holds `عبدالله بن ناصر القحطاني` and `Maria Santos` in one column.
+`auto()` picks the run type from the content.
+
+**Symptom if everything is marked RTL:** the Latin name renders reversed
+against its punctuation inside the mirrored table.
+
+### R6 — Long digit strings get their own LTR run
+
+`splitRuns()` breaks prose at Latin/digit boundaries and marks each part
+explicitly.
+
+**Symptom without it:** the contract number `20260208114500` planted in the
+fixture's conclusion reorders. Word's bidi algorithm handles mixed *words*
+well; long digit sequences beside Arabic punctuation are where it fails
+visibly.
+
+### R7 — Do not reverse rows to "fix" a table
+
+`<w:bidiVisual/>` mirrors the column order. Rows are built in logical order —
+first column first — exactly as in Excel (X2). Reversing the arrays as well
+flips it back.
+
+### Digit shape
+
+Arabic-Indic numerals (٠–٩) are deliberately **not** used. The report is full
+of scores, percentages and dates that get checked against a source
+spreadsheet, and converting them makes that harder. If a client asks, it
+belongs in `RenderProfile` as an option, never as a default.
 
 ## PowerPoint (`src/render/pptx.ts`)
 
-Arrives in M5.
+PowerPoint inverts the rule that governs Excel and Word, which is why it gets
+its own warning rather than a footnote.
+
+### P1 — `rtlMode` on every Arabic text body
+
+`rtlMode: true` writes `<a:pPr rtl="1">`. Applied through the shared
+`arText()` helper so no slide can quietly omit it.
+
+**Symptom without it:** Arabic paragraphs render left-to-right with their
+punctuation on the wrong end, on an otherwise correct-looking slide.
+
+### P2 — Charts must be **reversed by hand**. This is the opposite of X2/R7.
+
+In Excel, `rightToLeft` mirrors the columns. In Word, `<w:bidiVisual/>`
+mirrors the table. In both, the renderer does the flipping and reversing your
+arrays as well is the classic double-flip bug.
+
+**A chart has no such flag.** There is no bidi attribute anywhere in
+`chartN.xml` that reorders categories, so an Arabic bar chart puts its first
+category on the left unless the *data* is reversed. `rtlCategories()` reverses
+labels and values together — reversing one without the other silently
+mislabels every bar, which is the worst kind of wrong because the chart still
+looks plausible.
+
+So: **do not reverse for Excel or Word; do reverse for charts.** The
+distinguishing question is whether the format offers a mirroring flag.
+
+### P3 — Chart text needs `rtl="1"` injected
+
+pptxgenjs writes `<a:pPr>` inside a chart's `<c:txPr>` with no `rtl`
+attribute and exposes no option to set one.
+
+**Symptom:** a deck whose slides are perfectly RTL still renders every axis
+label, legend entry and data label left-to-right. `hardenPptxRtl()` adds the
+attribute to chart parts after packing, and D-series-style verifier rule P3
+asserts it.
+
+### P4 — Native charts, not pictures
+
+`ppt/charts/chartN.xml` parts, no `ppt/media/`. A chart rendered as an image
+cannot be selected, re-themed or corrected by the person receiving the deck,
+and its text is invisible to the RTL rules entirely. The verifier fails a deck
+that has no chart parts.
+
+### P5 — Reproducibility needs two extra steps here
+
+pptxgenjs numbers chart and embedded-workbook parts from a **module-level
+counter**, so the second deck rendered in a process gets `chart5.xml` where
+the first got `chart1.xml` — part names that depend on process history rather
+than input. `normalizeChartNumbering()` renumbers them from 1 and rewrites
+every reference.
+
+Each native chart also carries a complete embedded `.xlsx` (what PowerPoint
+opens behind "Edit Data"), with its own timestamps, so those nested packages
+are re-stamped and re-zipped too. Without both steps the deck is reproducible
+everywhere except four nested zips and a set of part names.
 
 ---
 
@@ -154,7 +303,20 @@ requires `checks > 0`. Otherwise a verifier that silently stopped finding
 worksheets would report success on every file, which is the worst possible
 failure for a tool whose entire job is catching silence.
 
-**The checks have negative controls.** `src/render/xlsx.test.ts` takes a
-real workbook, strips `rightToLeft` out of the XML, re-zips it, and asserts
-that verification then fails — including the case where only *one* sheet
-loses the flag. A check that has never been observed to fail is not evidence.
+**The checks have negative controls.** `src/render/xlsx.test.ts` and
+`src/render/docx.test.ts` take a real document, strip one flag out of the
+XML, re-zip it, and assert that verification then fails — including the cases
+where only *one* sheet or *one* table loses it. There is one such test per
+Word layer. A check that has never been observed to fail is not evidence.
+
+**Output is reproducible.** Both renderers take their timestamps from
+`draft.updatedAt` rather than the clock, and the docx post-processor pins the
+zip mtimes, so two renders of one draft are byte-identical and a test can
+assert it. The zip format only accepts 1980-2099, so the Unix epoch is
+rejected as an mtime.
+
+## Extracting this
+
+`.claude/skills/office-rtl/SKILL.md` holds the same rules written for someone
+who has never seen this project, and is intended to become its own repository.
+When a rule changes, change it in both.

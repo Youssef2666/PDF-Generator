@@ -55,6 +55,13 @@ interface DraftContextValue {
   flush: () => Promise<void>;
   startNewDraft: () => Promise<void>;
   discardDraft: () => Promise<void>;
+  /**
+   * Forget the draft locally, without asking the server to delete it. Used
+   * after finalize, where the export route has already consumed it — calling
+   * discardDraft() there would issue a pointless second DELETE and read as
+   * though the user had thrown the report away.
+   */
+  clearLocalDraft: () => void;
 }
 
 const DraftContext = createContext<DraftContextValue | null>(null);
@@ -234,6 +241,18 @@ export function DraftProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const clearLocalDraft = useCallback(() => {
+    if (timer.current !== null) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+    latest.current = null;
+    version.current += 1;
+    setDraft(null);
+    setSaveState("idle");
+    setLastSavedAt(null);
+  }, []);
+
   const discardDraft = useCallback(async () => {
     if (timer.current !== null) {
       clearTimeout(timer.current);
@@ -264,8 +283,20 @@ export function DraftProvider({ children }: { children: ReactNode }) {
       flush,
       startNewDraft,
       discardDraft,
+      clearLocalDraft,
     }),
-    [draft, loading, error, saveState, lastSavedAt, update, flush, startNewDraft, discardDraft],
+    [
+      draft,
+      loading,
+      error,
+      saveState,
+      lastSavedAt,
+      update,
+      flush,
+      startNewDraft,
+      discardDraft,
+      clearLocalDraft,
+    ],
   );
 
   return <DraftContext.Provider value={value}>{children}</DraftContext.Provider>;

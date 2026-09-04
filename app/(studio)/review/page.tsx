@@ -1,20 +1,22 @@
 "use client";
 
 /**
- * F7 — the readiness checklist and the computed figures panel.
+ * F7 — the readiness checklist, the computed figures panel, and finalize.
  *
- * Both halves are pure output. The checklist comes from
- * `computeChecklist(draft)` — the same function the export gate will use, so
- * what this screen shows and what finalize enforces cannot disagree. The
+ * The first two halves are pure output. The checklist comes from
+ * `computeChecklist(draft)` — the very function the export route enforces —
+ * so what this screen shows and what finalize allows cannot disagree. The
  * figures are read straight out of the draft's `computed` blocks.
  *
- * The finalize action itself lands in M5; the gate is already wired here so
- * the button can only ever be enabled when the checklist is satisfied.
+ * The gate is enforced twice on purpose: the button is disabled here, and
+ * the route re-checks. A request arriving some other way meets the same bar.
  */
 
 import Link from "next/link";
 
-import { useLoadedDraft } from "@/components/draft-provider";
+import { useState } from "react";
+
+import { useDraft, useLoadedDraft } from "@/components/draft-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -27,6 +29,133 @@ const SECTION_HREF: Record<ChecklistItem["section"], string> = {
   survey: "/survey",
   narrative: "/narrative",
 };
+
+type FinalizeState =
+  | { phase: "idle" }
+  | { phase: "running" }
+  | { phase: "done"; directory: string; files: string[] }
+  | { phase: "failed"; message: string; section?: string; failing?: string[] };
+
+/**
+ * Finalize.
+ *
+ * Gated on the checklist, and on there being nothing unsaved — exporting a
+ * draft whose last edit is still in flight would render the previous state.
+ * The button flushes first for exactly that reason.
+ *
+ * On failure the message names the section that broke and states plainly
+ * that the draft survived, because the first thing anyone wants to know when
+ * an export fails is whether their work is gone.
+ */
+function FinalizeCard({ ready }: { ready: boolean }) {
+  const { saveState, flush, clearLocalDraft } = useDraft();
+  const [state, setState] = useState<FinalizeState>({ phase: "idle" });
+
+  const busy = state.phase === "running";
+  const unsaved = saveState === "pending" || saveState === "saving";
+
+  const finalize = async () => {
+    setState({ phase: "running" });
+    try {
+      // Push any pending edit before rendering, or the package would be
+      // built from the previous save.
+      await flush();
+
+      const response = await fetch("/api/export", { method: "POST" });
+      const body = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        setState({
+          phase: "failed",
+          message: body?.error ?? `Export failed (HTTP ${response.status})`,
+          section: body?.section,
+          failing: body?.failing,
+        });
+        return;
+      }
+
+      setState({ phase: "done", directory: body.directory, files: body.files });
+      // The export route consumed the draft; drop our copy so the editor
+      // returns to its empty state.
+      clearLocalDraft();
+    } catch (error) {
+      setState({
+        phase: "failed",
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  };
+
+  if (state.phase === "done") {
+    return (
+      <Card className="border-emerald-600/40">
+        <CardHeader>
+          <CardTitle>Report finalized</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <p className="text-sm">
+            Written to{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+              output/{state.directory}/
+            </code>
+          </p>
+          <ul className="text-sm text-muted-foreground">
+            {state.files.map((file) => (
+              <li key={file}>· {file}</li>
+            ))}
+          </ul>
+          <p className="text-xs text-muted-foreground">
+            The draft has been cleared. Start a new report from any screen.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Finalize</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          Renders the Word report, Excel workbook and PowerPoint deck into{" "}
+          <code className="rounded bg-muted px-1 py-0.5 text-xs">output/</code>, writes
+          report-data.json alongside them, and then clears the draft.
+        </p>
+
+        <Button onClick={() => void finalize()} disabled={!ready || busy || unsaved}>
+          {busy
+            ? "Rendering…"
+            : !ready
+              ? "Checklist incomplete"
+              : unsaved
+                ? "Waiting for save…"
+                : "Finalize report"}
+        </Button>
+
+        {state.phase === "failed" ? (
+          <div className="space-y-1 rounded-md border border-destructive/40 p-3">
+            <p className="text-sm font-medium text-destructive">
+              {state.section ? `${state.section} failed.` : "Export failed."}
+            </p>
+            <p className="text-sm text-muted-foreground">{state.message}</p>
+            {state.failing?.length ? (
+              <ul className="text-sm text-muted-foreground">
+                {state.failing.map((item) => (
+                  <li key={item}>· {item}</li>
+                ))}
+              </ul>
+            ) : null}
+            <p className="text-xs text-muted-foreground">
+              Nothing was written and your draft is untouched.
+            </p>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
 
 function Figure({ label, value, muted }: { label: string; value: string; muted?: boolean }) {
   return (
@@ -42,7 +171,7 @@ function Figure({ label, value, muted }: { label: string; value: string; muted?:
 }
 
 export default function ReviewPage() {
-  const { draft, saveState } = useLoadedDraft();
+  const { draft } = useLoadedDraft();
   const checklist = computeChecklist(draft);
   const c = draft.computed;
 
@@ -242,25 +371,7 @@ export default function ReviewPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Finalize</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            Finalizing renders the Word, Excel and PowerPoint package and then clears the draft.
-            It arrives in M5; the gate below is already wired to the checklist.
-          </p>
-          <Button disabled={!checklist.ready || saveState === "pending" || saveState === "saving"}>
-            {checklist.ready ? "Finalize report" : "Checklist incomplete"}
-          </Button>
-          {checklist.ready ? (
-            <p className="text-xs text-muted-foreground">
-              Export is not implemented yet — this button becomes active in M5.
-            </p>
-          ) : null}
-        </CardContent>
-      </Card>
+      <FinalizeCard ready={checklist.ready} />
 
       {process.env.NODE_ENV !== "production" ? (
         <Card className="border-dashed">
@@ -269,15 +380,23 @@ export default function ReviewPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-muted-foreground">
-              Temporary, for looking at the Excel renderer in a real copy of Excel while it is
-              being built. Not the export — no files are written and the draft is untouched.
-              This card and its route are removed when the export lands in M5.
+              Temporary. Renders a single document and hands it straight back, for looking at
+              the output in real Office while it is being built. Not the export — no files are
+              written to output/ and the draft is untouched. Remove this card and
+              app/api/dev/ once the renderers are settled.
             </p>
-            <Button variant="outline" asChild>
-              <a href="/api/dev/xlsx" download>
-                Download Excel preview
-              </a>
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" asChild>
+                <a href="/api/dev/xlsx" download>
+                  Download Excel preview
+                </a>
+              </Button>
+              <Button variant="outline" asChild>
+                <a href="/api/dev/docx" download>
+                  Download Word preview
+                </a>
+              </Button>
+            </div>
             <p className="text-xs text-muted-foreground">
               Save the draft first if you have just edited something — the preview renders what
               is on disk, not what is on screen.

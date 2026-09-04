@@ -170,34 +170,272 @@ export function verifyXlsx(buffer: Buffer, target = "workbook.xlsx"): RtlReport 
 // Placeholders for the milestones that follow
 // ---------------------------------------------------------------------------
 
-export function verifyDocx(_buffer: Buffer, target = "report.docx"): RtlReport {
-  return {
-    target,
-    format: "docx",
-    checks: 0,
-    issues: [
-      {
-        where: target,
-        rule: "D0 not implemented",
-        detail: "docx verification arrives with the Word renderer in M4.",
-      },
-    ],
-  };
+/** Any character in the Arabic blocks, including presentation forms. */
+const ARABIC = /[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/;
+
+/** Inner text of a run or paragraph, from its <w:t> elements. */
+function textOf(xml: string): string {
+  return (xml.match(/<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/g) ?? [])
+    .map((t) => t.replace(/<[^>]+>/g, ""))
+    .join("");
 }
 
-export function verifyPptx(_buffer: Buffer, target = "deck.pptx"): RtlReport {
-  return {
-    target,
-    format: "pptx",
-    checks: 0,
-    issues: [
-      {
-        where: target,
-        rule: "P0 not implemented",
-        detail: "pptx verification arrives with the PowerPoint renderer in M5.",
-      },
-    ],
-  };
+/**
+ * Word RTL is six independent layers, and five of six looks almost right.
+ * Each is asserted separately so a failure names the layer that broke rather
+ * than saying "the document is wrong".
+ */
+export function verifyDocx(buffer: Buffer, target = "report.docx"): RtlReport {
+  const report: RtlReport = { target, format: "docx", checks: 0, issues: [] };
+  const parts = readParts(buffer);
+
+  const document = parts["word/document.xml"];
+  const settings = parts["word/settings.xml"] ?? "";
+  const styles = parts["word/styles.xml"] ?? "";
+
+  if (!document) {
+    report.issues.push({
+      where: target,
+      rule: "D0 package has a document",
+      detail: "No word/document.xml in the package.",
+    });
+    return report;
+  }
+
+  const fail = (rule: string, where: string, detail: string) =>
+    report.issues.push({ rule, where, detail });
+
+  // --- Layer 0.0 -----------------------------------------------------------
+  report.checks += 1;
+  if (!/<w:themeFontLang[^>]*w:bidi="[^"]+"/.test(settings)) {
+    fail(
+      "D1 settings themeFontLang bidi",
+      "word/settings.xml",
+      "Missing <w:themeFontLang w:bidi>. This is the master switch: without " +
+        "it Word never turns its bidi pipeline on and every other layer is " +
+        "decoration. No docx library writes it by default.",
+    );
+  }
+
+  // --- Layer 0 -------------------------------------------------------------
+  report.checks += 1;
+  const docDefaults = styles.match(/<w:docDefaults>[\s\S]*?<\/w:docDefaults>/)?.[0] ?? "";
+  if (!/<w:lang[^>]*w:bidi="[^"]+"/.test(docDefaults)) {
+    fail(
+      "D2 docDefaults lang bidi",
+      "word/styles.xml",
+      "docDefaults has no <w:lang w:bidi>. Tables survive without it; " +
+        "paragraph and heading rendering does not.",
+    );
+  }
+
+  // --- Layer 0.5 -----------------------------------------------------------
+  report.checks += 1;
+  if (!/<w:pPrDefault>[\s\S]*?<w:bidi\/>/.test(docDefaults)) {
+    fail(
+      "D3 docDefaults paragraph bidi",
+      "word/styles.xml",
+      "docDefaults has no <w:pPr><w:bidi/>. Paragraphs added later, when " +
+        "someone edits the delivered file, inherit LTR.",
+    );
+  }
+
+  // --- Layer 1 -------------------------------------------------------------
+  const sectPrs = document.match(/<w:sectPr[\s\S]*?<\/w:sectPr>/g) ?? [];
+  report.checks += 1;
+  if (sectPrs.length === 0) {
+    fail("D4 section bidi", "word/document.xml", "No <w:sectPr> found.");
+  } else {
+    const missing = sectPrs.filter((s) => !/<w:bidi\s*\/>/.test(s));
+    if (missing.length > 0) {
+      fail(
+        "D4 section bidi",
+        "word/document.xml",
+        `${missing.length} of ${sectPrs.length} <w:sectPr> lack <w:bidi/>.`,
+      );
+    }
+    // Schema order: w:bidi must precede w:docGrid or Word rejects the part.
+    report.checks += 1;
+    const misordered = sectPrs.filter((s) => {
+      const bidi = s.indexOf("<w:bidi/>");
+      const grid = s.indexOf("<w:docGrid");
+      return bidi !== -1 && grid !== -1 && bidi > grid;
+    });
+    if (misordered.length > 0) {
+      fail(
+        "D5 section bidi ordering",
+        "word/document.xml",
+        "<w:bidi/> appears after <w:docGrid>. The schema requires it before, " +
+          "and Word will refuse to open the file.",
+      );
+    }
+  }
+
+  // --- Layer 2 -------------------------------------------------------------
+  const tblPrs = document.match(/<w:tblPr>[\s\S]*?<\/w:tblPr>/g) ?? [];
+  report.checks += 1;
+  const tablesWithout = tblPrs.filter((t) => !/<w:bidiVisual\s*\/>/.test(t));
+  if (tablesWithout.length > 0) {
+    fail(
+      "D6 table bidiVisual",
+      "word/document.xml",
+      `${tablesWithout.length} of ${tblPrs.length} tables lack <w:bidiVisual/>. ` +
+        "Their columns render in the wrong order.",
+    );
+  }
+
+  // --- Layer 3a: every paragraph that holds text ---------------------------
+  const paragraphs = document.match(/<w:p(?:\s[^>]*)?>[\s\S]*?<\/w:p>/g) ?? [];
+  const withText = paragraphs.filter((p) => textOf(p).trim() !== "");
+  report.checks += 1;
+  const paraMissing = withText.filter((p) => !/<w:bidi\s*\/>/.test(p));
+  if (paraMissing.length > 0) {
+    fail(
+      "D7 paragraph bidi",
+      "word/document.xml",
+      `${paraMissing.length} of ${withText.length} text paragraphs lack ` +
+        `<w:bidi/>. First offender: "${textOf(paraMissing[0]).slice(0, 60)}".`,
+    );
+  }
+
+  // --- Layer 3b: every run that holds Arabic -------------------------------
+  const runs = document.match(/<w:r(?:\s[^>]*)?>[\s\S]*?<\/w:r>/g) ?? [];
+  const arabicRuns = runs.filter((r) => ARABIC.test(textOf(r)));
+  report.checks += 1;
+  if (arabicRuns.length === 0) {
+    fail(
+      "D8 run rtl",
+      "word/document.xml",
+      "No Arabic runs found at all. Either the document is empty or the text " +
+        "did not survive rendering.",
+    );
+  } else {
+    const runMissing = arabicRuns.filter((r) => !/<w:rtl\s*\/>/.test(r));
+    if (runMissing.length > 0) {
+      fail(
+        "D8 run rtl",
+        "word/document.xml",
+        `${runMissing.length} of ${arabicRuns.length} Arabic runs lack <w:rtl/>. ` +
+          `First offender: "${textOf(runMissing[0]).slice(0, 40)}".`,
+      );
+    }
+  }
+
+  // --- Complex-script fonts ------------------------------------------------
+  report.checks += 1;
+  const arabicWithoutCs = arabicRuns.filter((r) => !/w:cs="[^"]+"/.test(r));
+  if (arabicWithoutCs.length > 0 && !/<w:rFonts[^>]*w:cs="[^"]+"/.test(docDefaults)) {
+    fail(
+      "D9 complex-script font",
+      "word/document.xml",
+      `${arabicWithoutCs.length} Arabic runs set no w:cs font, and docDefaults ` +
+        "does not supply one. Arabic then renders in whatever the reader's " +
+        "machine falls back to, differently on Windows and macOS.",
+    );
+  }
+
+  // --- Layer 5: logical alignment ------------------------------------------
+  report.checks += 1;
+  const physical = document.match(/<w:jc w:val="(left|right)"/g) ?? [];
+  if (physical.length > 0) {
+    fail(
+      "D10 logical alignment",
+      "word/document.xml",
+      `${physical.length} paragraphs use physical <w:jc w:val="left|right">. ` +
+        "Word for Mac reinterprets physical alignment under RTL, so these are " +
+        'correct on Windows and wrong on a Mac. Use "start"/"end".',
+    );
+  }
+
+  return report;
+}
+
+/**
+ * PowerPoint.
+ *
+ * Slides and charts fail differently and are checked separately: a deck
+ * whose slides are correctly RTL can still have every chart axis reading
+ * left-to-right, because pptxgenjs writes no `rtl` attribute into chart text
+ * properties and offers no option for it.
+ */
+export function verifyPptx(buffer: Buffer, target = "deck.pptx"): RtlReport {
+  const report: RtlReport = { target, format: "pptx", checks: 0, issues: [] };
+  const parts = readParts(buffer);
+
+  const slidePaths = Object.keys(parts)
+    .filter((p) => /^ppt\/slides\/slide\d+\.xml$/.test(p))
+    .sort();
+  const chartPaths = Object.keys(parts)
+    .filter((p) => /^ppt\/charts\/chart\d+\.xml$/.test(p))
+    .sort();
+
+  if (slidePaths.length === 0) {
+    report.issues.push({
+      where: target,
+      rule: "P0 deck has slides",
+      detail: "No slide parts found in the package.",
+    });
+    return report;
+  }
+
+  // --- P1: Arabic paragraphs on slides carry rtl="1" -----------------------
+  for (const slidePath of slidePaths) {
+    const xml = parts[slidePath];
+    const slideName = slidePath.replace("ppt/slides/", "");
+
+    // Only judge slides that actually contain Arabic.
+    const paragraphs = xml.match(/<a:p>[\s\S]*?<\/a:p>/g) ?? [];
+    const arabicParagraphs = paragraphs.filter((p) => ARABIC.test(p));
+    if (arabicParagraphs.length === 0) continue;
+
+    report.checks += 1;
+    const missing = arabicParagraphs.filter((p) => !/<a:pPr[^>]*\brtl="1"/.test(p));
+    if (missing.length > 0) {
+      report.issues.push({
+        where: slideName,
+        rule: "P1 slide paragraph rtl",
+        detail:
+          `${missing.length} of ${arabicParagraphs.length} Arabic paragraphs lack ` +
+          'rtl="1" on their <a:pPr>.',
+      });
+    }
+  }
+
+  // --- P2: charts are native, not pictures ---------------------------------
+  report.checks += 1;
+  if (chartPaths.length === 0) {
+    report.issues.push({
+      where: target,
+      rule: "P2 native charts",
+      detail:
+        "No ppt/charts/chartN.xml parts. The deck has no native charts — if " +
+        "figures were rendered as images they cannot be selected, edited or " +
+        "re-themed in PowerPoint.",
+    });
+  }
+
+  // --- P3: chart text carries rtl="1" --------------------------------------
+  for (const chartPath of chartPaths) {
+    const xml = parts[chartPath];
+    if (!ARABIC.test(xml)) continue;
+
+    report.checks += 1;
+    const paragraphs = xml.match(/<a:pPr[^>]*>/g) ?? [];
+    const missing = paragraphs.filter((p) => !/\brtl="1"/.test(p));
+    if (missing.length > 0) {
+      report.issues.push({
+        where: chartPath.replace("ppt/charts/", ""),
+        rule: "P3 chart text rtl",
+        detail:
+          `${missing.length} of ${paragraphs.length} <a:pPr> in this chart lack ` +
+          'rtl="1". pptxgenjs writes none by default and exposes no option, so ' +
+          "axis and legend labels render left-to-right inside an otherwise " +
+          "correct deck.",
+      });
+    }
+  }
+
+  return report;
 }
 
 /** Dispatch on extension. */
@@ -246,18 +484,30 @@ async function main(): Promise<void> {
     }
   } else {
     const { renderXlsx } = await import("@/render/xlsx");
+    const { renderDocx } = await import("@/render/docx");
     const { DraftSchema } = await import("@/lib/schema");
 
     const fixturePath = path.join(process.cwd(), "fixtures", "demo-draft.json");
     const draft = DraftSchema.parse(JSON.parse(await fs.readFile(fixturePath, "utf8")));
-
-    const buffer = await renderXlsx(draft);
     const scratch = await fs.mkdtemp(path.join(os.tmpdir(), "crs-rtl-"));
-    const out = path.join(scratch, "demo.xlsx");
-    await fs.writeFile(out, buffer);
 
-    console.log(`Rendered fixture to ${out}`);
-    reports.push(verifyXlsx(buffer, out));
+    const xlsx = await renderXlsx(draft);
+    const xlsxPath = path.join(scratch, "demo.xlsx");
+    await fs.writeFile(xlsxPath, xlsx);
+    reports.push(verifyXlsx(xlsx, xlsxPath));
+
+    const docx = await renderDocx(draft);
+    const docxPath = path.join(scratch, "demo.docx");
+    await fs.writeFile(docxPath, docx);
+    reports.push(verifyDocx(docx, docxPath));
+
+    const { renderPptx } = await import("@/render/pptx");
+    const pptx = await renderPptx(draft);
+    const pptxPath = path.join(scratch, "demo.pptx");
+    await fs.writeFile(pptxPath, pptx);
+    reports.push(verifyPptx(pptx, pptxPath));
+
+    console.log(`Rendered fixture to ${scratch}`);
   }
 
   for (const report of reports) console.log(formatReport(report));
