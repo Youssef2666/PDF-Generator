@@ -1,0 +1,16 @@
+# Normalise line endings. Checked-in text is LF everywhere.
+* text=auto eol=lf
+
+# Shell hooks are executed by bash. A CRLF line ending makes bash fail with
+# "\r: command not found", so these must stay LF regardless of platform.
+*.sh text eol=lf
+
+# Generated / binary artefacts git should not try to diff or normalise.
+pnpm-lock.yaml -diff linguist-generated
+*.pdf binary
+*.docx binary
+*.xlsx binary
+*.pptx binary
+*.png binary
+*.jpg binary
+*.gif binary
