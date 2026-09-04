@@ -261,6 +261,30 @@ export default function ReviewPage() {
           ) : null}
         </CardContent>
       </Card>
+
+      {process.env.NODE_ENV !== "production" ? (
+        <Card className="border-dashed">
+          <CardHeader>
+            <CardTitle className="text-base">Developer preview</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Temporary, for looking at the Excel renderer in a real copy of Excel while it is
+              being built. Not the export — no files are written and the draft is untouched.
+              This card and its route are removed when the export lands in M5.
+            </p>
+            <Button variant="outline" asChild>
+              <a href="/api/dev/xlsx" download>
+                Download Excel preview
+              </a>
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Save the draft first if you have just edited something — the preview renders what
+              is on disk, not what is on screen.
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

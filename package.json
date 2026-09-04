@@ -13,11 +13,13 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "fixture": "tsx scripts/make-demo-fixture.ts"
+    "fixture": "tsx scripts/make-demo-fixture.ts",
+    "verify:rtl": "tsx scripts/verify-rtl.ts"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
     "cn": "^0.2.5",
+    "exceljs": "^4.4.0",
     "lucide-react": "^1.41.0",
     "next": "16.3.4",
     "next-themes": "^0.4.6",
@@ -39,6 +41,7 @@
     "@vitest/coverage-v8": "^5.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
+    "fflate": "^0.8.3",
     "happy-dom": "^20.14.0",
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
