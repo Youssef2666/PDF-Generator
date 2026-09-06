@@ -4,7 +4,7 @@ Turns a course's attendance, grades and survey results into a finished
 Arabic report package — Word, Excel and PowerPoint — that reads correctly
 right-to-left on every machine that opens it.
 
-![A full run: empty draft to a three-document package](docs/demo.gif)
+![A full run: empty draft to a three-document package, with the UI switched to Arabic](docs/demo.gif)
 
 ---
 
@@ -35,6 +35,8 @@ them.
 - **Gates delivery on a checklist.** Twelve rules; ten of them block.
 - **Renders three documents** and writes them beside a `report-data.json`
   that accounts for where every number came from.
+- **Reads in English or Arabic.** One switch flips every screen right-to-left,
+  in place, without touching the draft. The report itself is Arabic either way.
 
 ## Try it
 
@@ -50,7 +52,7 @@ Then, to see a finished package without typing anything:
 curl -X PUT -H 'Content-Type: application/json' \
      --data-binary @fixtures/demo-draft.json http://localhost:3000/api/draft
 curl -X POST http://localhost:3000/api/export
-ls output/                     # 2026-…-al-ufuq-industries-…/
+ls output/                     # 2026-…-al-jabal-al-akhdar-industries-…/
 ```
 
 Or run the whole thing as a test:
@@ -144,7 +146,7 @@ Reasoning and enforcement:
 
 ```
 app/            routes and the six editing screens
-src/lib/        schema · compute · draft-store · pdf pipeline
+src/lib/        schema · compute · draft-store · pdf pipeline · i18n
 src/render/     docx · xlsx · pptx  (pure, deterministic)
 scripts/        verify-rtl · fixture generators · demo recorder
 .claude/        hooks · skills · agents · commands
@@ -171,7 +173,9 @@ The load-bearing ones:
 (the model writes the profile, not the data) ·
 [0007](docs/adr/0007-http-hook-for-draft-validation.md)
 (HTTP hook over command hook) ·
-[0011](docs/adr/0011-privacy-boundary.md) (what may leave the machine).
+[0011](docs/adr/0011-privacy-boundary.md) (what may leave the machine) ·
+[0012](docs/adr/0012-ui-locale-in-a-cookie-not-the-url.md) (the UI language
+lives in a cookie).
 
 ## Status and limits
 

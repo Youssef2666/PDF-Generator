@@ -237,7 +237,7 @@ build on any physical `w:jc`.
 
 ### R5 — Direction is chosen per value, not per column
 
-The roster holds `عبدالله بن ناصر القحطاني` and `Maria Santos` in one column.
+The roster holds `عبدالسلام محمد الفيتوري` and `Maria Santos` in one column.
 `auto()` picks the run type from the content.
 
 **Symptom if everything is marked RTL:** the Latin name renders reversed

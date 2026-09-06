@@ -43,14 +43,14 @@ const FIXTURE_PROFILE = path.join(process.cwd(), "fixtures", "attendance-sample.
 
 /** The names really in the sample. Used to prove they never leave. */
 const REAL_NAMES = [
-  "عبدالله بن ناصر القحطاني",
-  "نورة عبدالعزيز الدوسري",
+  "عبدالسلام محمد الفيتوري",
+  "خديجة عمر المصراتي",
   "Maria Santos",
-  "فهد سعد العتيبي",
-  "هند محمد الشمري",
-  "خالد إبراهيم الزهراني",
-  "ريم فيصل المطيري",
-  "ماجد عبدالرحمن الحربي",
+  "عبدالحميد سالم الورفلي",
+  "سالمة عبدالله الدرسي",
+  "خالد مفتاح الزنتاني",
+  "فاطمة بشير الغرياني",
+  "ميلاد رمضان الترهوني",
 ];
 
 let pages: ExtractedPage[];
@@ -140,7 +140,7 @@ describe("assertNoParticipantData", () => {
 
   it("refuses a mark token long enough to be a name", () => {
     expect(() =>
-      assertNoParticipantData({ marks: { "عبدالله بن ناصر": "present" } }),
+      assertNoParticipantData({ marks: { "عبدالسلام محمد": "present" } }),
     ).toThrow(/too long to be a tick/);
   });
 
@@ -412,7 +412,7 @@ describe("assertSampleIsAnonymised", () => {
     const sample = buildAnonymisedSample(pages)!;
     // Simulate a builder bug.
     sample.rows[0].cells[0] = {
-      text: "عبدالله بن ناصر القحطاني",
+      text: "عبدالسلام محمد الفيتوري",
       x: 60,
       width: 100,
       redacted: false,
@@ -507,17 +507,17 @@ describe("assembleProfile round trip", () => {
     // reach the profile at all — it is discarded rather than rejected. The
     // guard in parseProfile is the second line of defence, for callers that
     // hand it a raw object.
-    const leaky = { ...layout, participants: [{ name: "عبدالله بن ناصر" }] } as never;
+    const leaky = { ...layout, participants: [{ name: "عبدالسلام محمد" }] } as never;
     const assembled = assembleProfile(leaky, 1);
 
-    expect(JSON.stringify(assembled)).not.toContain("عبدالله");
+    expect(JSON.stringify(assembled)).not.toContain("عبدالسلام");
     expect(JSON.stringify(assembled)).not.toContain("participants");
   });
 
   it("refuses a layout whose marks are long enough to be names", () => {
     const leaky = {
       ...layout,
-      marks: { "عبدالله بن ناصر القحطاني": "present" as const },
+      marks: { "عبدالسلام محمد الفيتوري": "present" as const },
     };
     expect(() => assembleProfile(leaky, 1)).toThrow(/too long to be a tick/);
   });
@@ -536,12 +536,12 @@ describe("applyTableToDraft", () => {
       { date: "2026-02-09", startTime: "09:00", endTime: "12:00", durationHours: 3 },
     ],
     participants: [
-      { name: "عبدالله", department: "العمليات", marks: ["present", "late"] },
+      { name: "عبدالسلام", department: "العمليات", marks: ["present", "late"] },
       { name: "Maria Santos", department: "الجودة", marks: ["present", null] },
     ],
     provenance: {
       attendanceSource: "pdf-committed-profile",
-      profileId: "al-ufuq-register-v1",
+      profileId: "al-jabal-al-akhdar-register-v1",
       confidence: 1,
       sourceFilename: "register.pdf",
     },
@@ -568,7 +568,7 @@ describe("applyTableToDraft", () => {
 
     expect(result.provenance).toEqual({
       attendanceSource: "pdf-committed-profile",
-      profileId: "al-ufuq-register-v1",
+      profileId: "al-jabal-al-akhdar-register-v1",
       confidence: 1,
       sourceFilename: "register.pdf",
       extractedAt: "2026-03-02T00:00:00.000Z",

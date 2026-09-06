@@ -15,6 +15,7 @@ Write a new one with `/adr <the decision>`.
 | [0009](0009-one-json-draft-file-written-atomically.md) | One JSON draft file, written atomically | Why an interrupted autosave cannot lose a report |
 | [0010](0010-verify-rtl-in-the-produced-bytes.md) | Verify RTL in the produced bytes, with negative controls | Why RTL correctness is asserted rather than reviewed |
 | [0011](0011-privacy-boundary.md) | The privacy boundary: what may leave the machine | What is sent, what is not, and how that is enforced |
+| [0012](0012-ui-locale-in-a-cookie-not-the-url.md) | The UI language lives in a cookie, not in the URL | How the screens read in Arabic without touching the draft or the routes |
 
 ## The gap at 0001–0005
 

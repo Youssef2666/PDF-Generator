@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "id": "al-ufuq-register-v1",
-  "name": "Al-Ufuq Industries attendance register",
+  "id": "al-jabal-al-akhdar-register-v1",
+  "name": "Al-Jabal Al-Akhdar Industries attendance register",
   "description": "Landscape A4 register: name and department on the left, one column per session date on the right, single-letter marks. Contains layout only — no names, no dates, no attendance values.",
   "origin": "committed",
   "page": 1,

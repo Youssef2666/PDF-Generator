@@ -364,6 +364,9 @@ export function recomputeDraft(draft: Draft): Draft {
 
 export type ChecklistStatus = "pass" | "fail";
 
+/** Values a translated detail string is built from. */
+export type ChecklistParams = Record<string, string | number | string[]>;
+
 export interface ChecklistItem {
   id: string;
   /** What the reviewer needs to do, in plain terms. */
@@ -371,6 +374,14 @@ export interface ChecklistItem {
   status: ChecklistStatus;
   /** Why it is failing, or confirmation of what was found. */
   detail: string;
+  /**
+   * Which sentence `detail` is, as a stable code (`"grades-weights.off"`),
+   * with the figures it was built from. `detail` stays the English text the
+   * export route reports; the UI uses the code to say the same thing in the
+   * operator's language without re-deriving a single number.
+   */
+  detailCode: string;
+  params: ChecklistParams;
   /**
    * Required items gate finalize. Advisory items are reported but do not
    * block: they flag things that are usually mistakes but are legitimately
@@ -404,15 +415,31 @@ const NARRATIVE_LABELS: Record<keyof Narrative, string> = {
 export function computeChecklist(draft: Draft): ChecklistResult {
   const items: ChecklistItem[] = [];
 
+  /**
+   * `detail` is `[english text, code, params]`. The code names which
+   * sentence this is; the params are the figures in it. The same numbers
+   * appear in both, computed once here.
+   */
+  type Detail = [text: string, code: string, params?: ChecklistParams];
+
   const add = (
     id: string,
     section: ChecklistItem["section"],
     label: string,
     ok: boolean,
-    detail: string,
+    [detail, code, params = {}]: Detail,
     required = true,
   ) => {
-    items.push({ id, section, label, status: ok ? "pass" : "fail", detail, required });
+    items.push({
+      id,
+      section,
+      label,
+      status: ok ? "pass" : "fail",
+      detail,
+      detailCode: `${id}.${code}`,
+      params,
+      required,
+    });
   };
 
   // --- Course -------------------------------------------------------------
@@ -423,9 +450,7 @@ export function computeChecklist(draft: Draft): ChecklistResult {
       ["clientNameAr", "Arabic client name"],
       ["trainerNameAr", "Arabic trainer name"],
     ] as const
-  )
-    .filter(([key]) => course[key].trim() === "")
-    .map(([, label]) => label);
+  ).filter(([key]) => course[key].trim() === "");
 
   add(
     "course-identity",
@@ -433,8 +458,12 @@ export function computeChecklist(draft: Draft): ChecklistResult {
     "Course, client and trainer are named in Arabic",
     missingCourseFields.length === 0,
     missingCourseFields.length === 0
-      ? "All three are filled in."
-      : `Missing: ${missingCourseFields.join(", ")}.`,
+      ? ["All three are filled in.", "ok"]
+      : [
+          `Missing: ${missingCourseFields.map(([, label]) => label).join(", ")}.`,
+          "missing",
+          { fields: missingCourseFields.map(([key]) => key) },
+        ],
   );
 
   const hasDates = course.startDate !== null && course.endDate !== null;
@@ -445,10 +474,14 @@ export function computeChecklist(draft: Draft): ChecklistResult {
     "Start and end dates are set and in order",
     datesOrdered,
     !hasDates
-      ? "Both a start date and an end date are required."
+      ? ["Both a start date and an end date are required.", "missing"]
       : datesOrdered
-        ? `${course.startDate} to ${course.endDate}.`
-        : "The end date falls before the start date.",
+        ? [
+            `${course.startDate} to ${course.endDate}.`,
+            "ok",
+            { start: course.startDate!, end: course.endDate! },
+          ]
+        : ["The end date falls before the start date.", "reversed"],
   );
 
   // --- Sessions -----------------------------------------------------------
@@ -459,8 +492,12 @@ export function computeChecklist(draft: Draft): ChecklistResult {
     "At least one session",
     draft.sessions.length > 0,
     draft.sessions.length > 0
-      ? `${draft.sessions.length} sessions, ${draft.computed.totalHours} hours in total.`
-      : "Add sessions, or generate them in bulk from the date range.",
+      ? [
+          `${draft.sessions.length} sessions, ${draft.computed.totalHours} hours in total.`,
+          "ok",
+          { count: draft.sessions.length, hours: draft.computed.totalHours },
+        ]
+      : ["Add sessions, or generate them in bulk from the date range.", "none"],
   );
 
   add(
@@ -469,10 +506,14 @@ export function computeChecklist(draft: Draft): ChecklistResult {
     "Every session has credited hours",
     draft.sessions.length > 0 && sessionsWithHours === draft.sessions.length,
     draft.sessions.length === 0
-      ? "No sessions yet."
+      ? ["No sessions yet.", "none"]
       : sessionsWithHours === draft.sessions.length
-        ? "All sessions carry a duration."
-        : `${draft.sessions.length - sessionsWithHours} session(s) have zero hours.`,
+        ? ["All sessions carry a duration.", "ok"]
+        : [
+            `${draft.sessions.length - sessionsWithHours} session(s) have zero hours.`,
+            "zero",
+            { count: draft.sessions.length - sessionsWithHours },
+          ],
   );
 
   // --- Participants -------------------------------------------------------
@@ -482,8 +523,8 @@ export function computeChecklist(draft: Draft): ChecklistResult {
     "At least one participant",
     draft.participants.length > 0,
     draft.participants.length > 0
-      ? `${draft.participants.length} participants.`
-      : "Add participants manually, or import an attendance PDF.",
+      ? [`${draft.participants.length} participants.`, "ok", { count: draft.participants.length }]
+      : ["Add participants manually, or import an attendance PDF.", "none"],
   );
 
   const missingRoles = draft.participants.filter(
@@ -495,8 +536,12 @@ export function computeChecklist(draft: Draft): ChecklistResult {
     "Every participant has a job title and department",
     missingRoles.length === 0,
     missingRoles.length === 0
-      ? "All participants carry both."
-      : `${missingRoles.length} participant(s) are missing a job title or department.`,
+      ? ["All participants carry both.", "ok"]
+      : [
+          `${missingRoles.length} participant(s) are missing a job title or department.`,
+          "missing",
+          { count: missingRoles.length },
+        ],
     false,
   );
 
@@ -513,10 +558,14 @@ export function computeChecklist(draft: Draft): ChecklistResult {
     "Attendance recorded for every participant and session",
     attendanceComplete,
     totalCells === 0
-      ? "Nothing to record yet."
+      ? ["Nothing to record yet.", "nothing"]
       : attendanceComplete
-        ? `All ${totalCells} cells recorded.`
-        : `${totalCells - recordedCells} of ${totalCells} cells are still blank.`,
+        ? [`All ${totalCells} cells recorded.`, "ok", { total: totalCells }]
+        : [
+            `${totalCells - recordedCells} of ${totalCells} cells are still blank.`,
+            "blank",
+            { blank: totalCells - recordedCells, total: totalCells },
+          ],
   );
 
   // --- Grades -------------------------------------------------------------
@@ -526,8 +575,8 @@ export function computeChecklist(draft: Draft): ChecklistResult {
     "At least one grade column",
     draft.gradeColumns.length > 0,
     draft.gradeColumns.length > 0
-      ? `${draft.gradeColumns.length} columns.`
-      : "Add the columns this course is marked against.",
+      ? [`${draft.gradeColumns.length} columns.`, "ok", { count: draft.gradeColumns.length }]
+      : ["Add the columns this course is marked against.", "none"],
   );
 
   const weightOk = draft.gradeColumns.length > 0 && draft.computed.totalGradeWeight === 100;
@@ -537,10 +586,14 @@ export function computeChecklist(draft: Draft): ChecklistResult {
     "Grade weights total 100",
     weightOk,
     draft.gradeColumns.length === 0
-      ? "No columns to weight."
+      ? ["No columns to weight.", "none"]
       : weightOk
-        ? "Weights total 100."
-        : `Weights total ${draft.computed.totalGradeWeight}, not 100.`,
+        ? ["Weights total 100.", "ok"]
+        : [
+            `Weights total ${draft.computed.totalGradeWeight}, not 100.`,
+            "off",
+            { total: draft.computed.totalGradeWeight },
+          ],
   );
 
   const unmarked = draft.participants.filter((p) => p.computed.totalScore === null);
@@ -550,10 +603,14 @@ export function computeChecklist(draft: Draft): ChecklistResult {
     "Every participant is fully marked",
     draft.participants.length > 0 && unmarked.length === 0,
     draft.participants.length === 0
-      ? "No participants yet."
+      ? ["No participants yet.", "none"]
       : unmarked.length === 0
-        ? "All participants have a total score."
-        : `${unmarked.length} participant(s) have an unmarked column.`,
+        ? ["All participants have a total score.", "ok"]
+        : [
+            `${unmarked.length} participant(s) have an unmarked column.`,
+            "unmarked",
+            { count: unmarked.length },
+          ],
   );
 
   // --- Outcomes -----------------------------------------------------------
@@ -563,10 +620,18 @@ export function computeChecklist(draft: Draft): ChecklistResult {
     "No participant is left incomplete",
     draft.participants.length > 0 && draft.computed.incompleteCount === 0,
     draft.participants.length === 0
-      ? "No participants yet."
+      ? ["No participants yet.", "none"]
       : draft.computed.incompleteCount === 0
-        ? `${draft.computed.passedCount} passed, ${draft.computed.failedCount} failed.`
-        : `${draft.computed.incompleteCount} participant(s) still resolve to incomplete.`,
+        ? [
+            `${draft.computed.passedCount} passed, ${draft.computed.failedCount} failed.`,
+            "ok",
+            { passed: draft.computed.passedCount, failed: draft.computed.failedCount },
+          ]
+        : [
+            `${draft.computed.incompleteCount} participant(s) still resolve to incomplete.`,
+            "incomplete",
+            { count: draft.computed.incompleteCount },
+          ],
   );
 
   // --- Survey -------------------------------------------------------------
@@ -576,8 +641,12 @@ export function computeChecklist(draft: Draft): ChecklistResult {
     "At least one survey question",
     draft.survey.questions.length > 0,
     draft.survey.questions.length > 0
-      ? `${draft.survey.questions.length} questions.`
-      : "Add the questions this cohort was asked.",
+      ? [
+          `${draft.survey.questions.length} questions.`,
+          "ok",
+          { count: draft.survey.questions.length },
+        ]
+      : ["Add the questions this cohort was asked.", "none"],
   );
 
   const unanswered = draft.survey.questions.filter((q) => q.computed.average === null);
@@ -587,10 +656,18 @@ export function computeChecklist(draft: Draft): ChecklistResult {
     "Every survey question has responses",
     draft.survey.questions.length > 0 && unanswered.length === 0,
     draft.survey.questions.length === 0
-      ? "No questions yet."
+      ? ["No questions yet.", "none"]
       : unanswered.length === 0
-        ? `Overall average ${draft.survey.computed.overallAverage}.`
-        : `${unanswered.length} question(s) have no responses and will render as "no data".`,
+        ? [
+            `Overall average ${draft.survey.computed.overallAverage}.`,
+            "ok",
+            { average: draft.survey.computed.overallAverage ?? 0 },
+          ]
+        : [
+            `${unanswered.length} question(s) have no responses and will render as "no data".`,
+            "unanswered",
+            { count: unanswered.length },
+          ],
     false,
   );
 
@@ -604,8 +681,12 @@ export function computeChecklist(draft: Draft): ChecklistResult {
     "Every narrative section is written",
     emptyNarrative.length === 0,
     emptyNarrative.length === 0
-      ? "All eight sections are filled in."
-      : `Empty: ${emptyNarrative.map((k) => NARRATIVE_LABELS[k]).join(", ")}.`,
+      ? ["All eight sections are filled in.", "ok"]
+      : [
+          `Empty: ${emptyNarrative.map((k) => NARRATIVE_LABELS[k]).join(", ")}.`,
+          "empty",
+          { sections: emptyNarrative },
+        ],
   );
 
   const requiredFailing = items.filter((i) => i.required && i.status === "fail").length;

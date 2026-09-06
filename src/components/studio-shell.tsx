@@ -1,15 +1,19 @@
 "use client";
 
 /**
- * The persistent frame around every editing screen: left navigation, a page
- * header, the save indicator, and the gate that decides whether there is a
- * draft to edit at all.
+ * The persistent frame around every editing screen: the navigation rail, a
+ * page header, the save indicator, and the gate that decides whether there
+ * is a draft to edit at all.
  *
  * Two design commitments. The sidebar carries a per-screen count of failing
  * required checklist items and a readiness bar, so "what is still missing"
  * is visible from anywhere rather than only on Review. And the page header
  * owns each screen's title and one-line purpose, so the screens themselves
  * start straight at their content.
+ *
+ * Every string comes from the dictionary, and every offset is logical
+ * (`ms-`, `border-e`, `start-0`) rather than physical, so the same markup
+ * mirrors correctly when the root element is dir="rtl".
  */
 
 import Link from "next/link";
@@ -29,68 +33,28 @@ import {
 } from "lucide-react";
 
 import { useDraft } from "@/components/draft-provider";
+import { LanguageSwitch } from "@/components/language-switch";
+import { useLocale } from "@/components/locale-provider";
 import { Button } from "@/components/ui/button";
 import { computeChecklist, type ChecklistItem } from "@/lib/compute";
+import { intlTagOf, type Dictionary } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 interface NavEntry {
   href: string;
-  label: string;
-  description: string;
+  key: keyof Dictionary["nav"];
   icon: LucideIcon;
   section: ChecklistItem["section"] | null;
 }
 
 const NAV: NavEntry[] = [
-  {
-    href: "/course",
-    label: "Course setup",
-    description: "Who ran it, for whom, when — and the session schedule.",
-    icon: Settings2,
-    section: "course",
-  },
-  {
-    href: "/attendance",
-    label: "Import attendance",
-    description: "Read the client's register, review it beside the page, confirm.",
-    icon: FileUp,
-    section: null,
-  },
-  {
-    href: "/participants",
-    label: "Participants",
-    description: "The roster and the attendance matrix.",
-    icon: Users,
-    section: "participants",
-  },
-  {
-    href: "/grades",
-    label: "Grades",
-    description: "Columns, weights, marks, and the outcomes they produce.",
-    icon: GraduationCap,
-    section: "grades",
-  },
-  {
-    href: "/survey",
-    label: "Survey",
-    description: "Questions and the response tally for each rating.",
-    icon: MessageSquareText,
-    section: "survey",
-  },
-  {
-    href: "/narrative",
-    label: "Narrative",
-    description: "The report's prose, in Arabic.",
-    icon: PenLine,
-    section: "narrative",
-  },
-  {
-    href: "/review",
-    label: "Review & finalize",
-    description: "The readiness checklist, the computed figures, and export.",
-    icon: ClipboardCheck,
-    section: null,
-  },
+  { href: "/course", key: "course", icon: Settings2, section: "course" },
+  { href: "/attendance", key: "attendance", icon: FileUp, section: null },
+  { href: "/participants", key: "participants", icon: Users, section: "participants" },
+  { href: "/grades", key: "grades", icon: GraduationCap, section: "grades" },
+  { href: "/survey", key: "survey", icon: MessageSquareText, section: "survey" },
+  { href: "/narrative", key: "narrative", icon: PenLine, section: "narrative" },
+  { href: "/review", key: "review", icon: ClipboardCheck, section: null },
 ];
 
 // ---------------------------------------------------------------------------
@@ -99,19 +63,25 @@ const NAV: NavEntry[] = [
 
 function SaveIndicator() {
   const { saveState, lastSavedAt, error } = useDraft();
+  const { locale, t } = useLocale();
 
   const text =
     saveState === "saving"
-      ? "Saving"
+      ? t.save.saving
       : saveState === "pending"
-        ? "Unsaved changes"
+        ? t.save.pending
         : saveState === "error"
-          ? "Save failed"
+          ? t.save.error
           : saveState === "saved"
             ? lastSavedAt
-              ? `Saved ${lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
-              : "Saved"
-            : "No changes";
+              ? t.save.savedAt(
+                  lastSavedAt.toLocaleTimeString(intlTagOf(locale), {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  }),
+                )
+              : t.save.saved
+            : t.save.idle;
 
   const tone =
     saveState === "error"
@@ -167,13 +137,14 @@ function SaveIndicator() {
 export function StudioShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { draft, loading, error, startNewDraft, lastExport } = useDraft();
+  const { t } = useLocale();
 
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-canvas">
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="size-4 animate-spin" aria-hidden />
-          Loading draft…
+          {t.shell.loading}
         </p>
       </div>
     );
@@ -190,13 +161,16 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
             >
               <p className="flex items-center gap-2 text-sm font-semibold">
                 <Check className="size-4 text-success" aria-hidden />
-                Report finalized
+                {t.shell.finalized}
               </p>
-              <p className="mt-2 text-sm text-muted-foreground">Written to</p>
-              <code className="mt-1 block truncate rounded-md bg-background px-2.5 py-1.5 text-xs">
+              <p className="mt-2 text-sm text-muted-foreground">{t.shell.writtenTo}</p>
+              <code
+                className="mt-1 block truncate rounded-md bg-background px-2.5 py-1.5 text-xs"
+                dir="ltr"
+              >
                 output/{lastExport.directory}/
               </code>
-              <ul className="mt-3 grid grid-cols-2 gap-1 text-xs text-muted-foreground">
+              <ul className="mt-3 grid grid-cols-2 gap-1 text-xs text-muted-foreground" dir="ltr">
                 {lastExport.files.map((file) => (
                   <li key={file} className="truncate">
                     {file}
@@ -207,17 +181,19 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
           ) : null}
 
           <div className="rounded-2xl border border-border bg-card p-8 shadow-[0_1px_2px_0_rgb(0_0_0/0.03)]">
-            <div className="mb-5 flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <BookOpenText className="size-5" aria-hidden />
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div className="flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                <BookOpenText className="size-5" aria-hidden />
+              </div>
+              <LanguageSwitch />
             </div>
-            <h1 className="text-xl font-semibold tracking-tight">No report in progress</h1>
+            <h1 className="text-xl font-semibold tracking-tight">{t.shell.noReport}</h1>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Start a new report to begin entering course details, participants, grades, survey
-              results and narrative.
+              {t.shell.noReportBody}
             </p>
             {error ? <p className="mt-3 text-sm text-destructive">{error}</p> : null}
             <Button className="mt-6" size="lg" onClick={() => void startNewDraft()}>
-              Start a new report
+              {t.shell.start}
             </Button>
           </div>
         </div>
@@ -237,19 +213,20 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
   const progress = requiredTotal === 0 ? 0 : Math.round((requiredPassing / requiredTotal) * 100);
 
   const current = NAV.find((n) => n.href === pathname);
+  const currentCopy = current ? t.nav[current.key] : null;
 
   return (
     <div className="flex min-h-screen bg-canvas">
       {/* ---------------------------------------------------------------- */}
-      <aside className="sticky top-0 flex h-screen w-[268px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
+      <aside className="sticky top-0 flex h-screen w-[268px] shrink-0 flex-col border-e border-sidebar-border bg-sidebar">
         <div className="flex items-center gap-3 px-5 pt-6 pb-5">
           <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <BookOpenText className="size-[18px]" aria-hidden />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold tracking-tight">Course Report Studio</p>
+            <p className="text-sm font-semibold tracking-tight">{t.appName}</p>
             <p className="truncate text-xs text-muted-foreground" dir="auto">
-              {draft.course.titleAr || "Untitled report"}
+              {draft.course.titleAr || t.untitledReport}
             </p>
           </div>
         </div>
@@ -276,7 +253,7 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
                     {active ? (
                       <span
                         aria-hidden
-                        className="absolute inset-y-2 -left-3 w-0.5 rounded-full bg-primary"
+                        className="absolute inset-y-2 -start-3 w-0.5 rounded-full bg-primary"
                       />
                     ) : null}
                     <Icon
@@ -286,12 +263,12 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
                       )}
                       aria-hidden
                     />
-                    <span className="flex-1 truncate">{entry.label}</span>
+                    <span className="flex-1 truncate">{t.nav[entry.key].label}</span>
 
                     {failing > 0 ? (
                       <span
                         className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-warning/15 px-1.5 text-[11px] font-semibold tabular-nums text-foreground"
-                        title={`${failing} required item(s) outstanding`}
+                        title={t.shell.outstandingBadge(failing)}
                       >
                         {failing}
                       </span>
@@ -305,13 +282,13 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
           </ul>
         </nav>
 
-        <div className="border-t border-sidebar-border p-4">
+        <div className="space-y-3 border-t border-sidebar-border p-4">
           <div className="rounded-xl border border-border bg-background p-3.5">
             <div className="flex items-baseline justify-between">
               <p className="text-xs font-medium">
-                {checklist.ready ? "Ready to finalize" : "Readiness"}
+                {checklist.ready ? t.shell.readyToFinalize : t.shell.readiness}
               </p>
-              <p className="text-xs tabular-nums text-muted-foreground">
+              <p className="text-xs tabular-nums text-muted-foreground" dir="ltr">
                 {requiredPassing}/{requiredTotal}
               </p>
             </div>
@@ -332,10 +309,11 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
             </div>
             <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
               {checklist.ready
-                ? "Every required item passes."
-                : `${checklist.requiredFailing} required item${checklist.requiredFailing === 1 ? "" : "s"} outstanding.`}
+                ? t.shell.everyRequiredPasses
+                : t.shell.outstanding(checklist.requiredFailing)}
             </p>
           </div>
+          <LanguageSwitch className="px-1" />
         </div>
       </aside>
 
@@ -345,11 +323,11 @@ export function StudioShell({ children }: { children: React.ReactNode }) {
           <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-6 px-8 py-4">
             <div className="min-w-0">
               <h1 className="text-lg font-semibold tracking-tight">
-                {current?.label ?? "Course Report Studio"}
+                {currentCopy?.label ?? t.appName}
               </h1>
-              {current?.description ? (
+              {currentCopy?.description ? (
                 <p className="mt-0.5 truncate text-sm text-muted-foreground">
-                  {current.description}
+                  {currentCopy.description}
                 </p>
               ) : null}
             </div>

@@ -19,13 +19,14 @@ import { useState } from "react";
 
 import { useLoadedDraft } from "@/components/draft-provider";
 import { ArabicInput, AutoInput, LtrInput } from "@/components/fields";
+import { useT } from "@/components/locale-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { applyTableToDraft, type ConfirmedTable } from "@/lib/pdf/to-draft";
 import type { AttendanceStatus } from "@/lib/schema";
 
-const STATUSES: Array<AttendanceStatus | ""> = ["", "present", "late", "absent", "excused"];
+const STATUSES: AttendanceStatus[] = ["present", "late", "absent", "excused"];
 
 interface Warning {
   code: string;
@@ -56,6 +57,7 @@ type Source = "pdf-committed-profile" | "pdf-proposed-profile" | "manual";
 
 export default function AttendancePage() {
   const { draft, update } = useLoadedDraft();
+  const t = useT();
 
   const [uploadId, setUploadId] = useState<string | null>(null);
   const [filename, setFilename] = useState<string | null>(null);
@@ -97,7 +99,9 @@ export default function AttendancePage() {
       const response = await fetch("/api/pdf/extract", { method: "POST", body: form });
       const body = await response.json();
 
-      if (!response.ok) throw new Error(body?.error ?? `Upload failed (${response.status})`);
+      if (!response.ok) {
+        throw new Error(body?.error ?? t.attendanceImport.uploadFailed(response.status));
+      }
 
       setUploadId(body.upload.id);
       setFilename(body.upload.filename);
@@ -111,14 +115,10 @@ export default function AttendancePage() {
         setSessionDates(match.sessions.map((s) => s.label));
         setRows(match.participants.map((p) => ({ ...p })));
         setNotice(
-          `Matched "${match.profileName}" with ${Math.round(match.confidence * 100)}% of cells read. ` +
-            "Check it against the page before confirming.",
+          t.attendanceImport.matched(match.profileName, Math.round(match.confidence * 100)),
         );
       } else {
-        setNotice(
-          `No committed profile matched this document (${body.profilesTried} tried). ` +
-            "Enter the table by hand below, or propose a profile if that is enabled.",
-        );
+        setNotice(t.attendanceImport.noMatch(body.profilesTried));
         // Fetch the proposal preview so the operator can see what it would send.
         const preview = await fetch(`/api/pdf/propose?upload=${body.upload.id}`);
         if (preview.ok) setProposal(await preview.json());
@@ -142,7 +142,7 @@ export default function AttendancePage() {
         body: JSON.stringify({ upload: uploadId, consent: true }),
       });
       const body = await response.json();
-      if (!response.ok) throw new Error(body?.error ?? "Proposal failed");
+      if (!response.ok) throw new Error(body?.error ?? t.attendanceImport.proposalFailed);
 
       setSource("pdf-proposed-profile");
       setProfileId(body.profile.id);
@@ -150,10 +150,7 @@ export default function AttendancePage() {
       setWarnings(body.warnings ?? []);
       setSessionDates(body.sessions.map((s: { label: string }) => s.label));
       setRows(body.participants.map((p: EditableRow) => ({ ...p })));
-      setNotice(
-        "A profile was proposed and run locally. The table below came from that profile, " +
-          "not from the model — check every row.",
-      );
+      setNotice(t.attendanceImport.proposed);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -173,7 +170,7 @@ export default function AttendancePage() {
         : [new Date().toISOString().slice(0, 10)],
     );
     setRows([{ name: "", department: "", marks: [null] }]);
-    setNotice("Blank table. Add rows and sessions, then confirm.");
+    setNotice(t.attendanceImport.blank);
   }
 
   function confirm() {
@@ -196,10 +193,7 @@ export default function AttendancePage() {
 
     update((d) => applyTableToDraft(d, table));
     setRows(null);
-    setNotice(
-      `${table.participants.length} participants and ${table.sessions.length} sessions written ` +
-        "into the draft. Times default to 09:00-12:00 — adjust them on Course setup.",
-    );
+    setNotice(t.attendanceImport.written(table.participants.length, table.sessions.length));
   }
 
   const setRow = (index: number, patch: Partial<EditableRow>) =>
@@ -227,39 +221,46 @@ export default function AttendancePage() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Import an attendance register</CardTitle>
+          <CardTitle>{t.attendanceImport.card}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Upload the client&apos;s PDF. A committed profile is applied locally if one fits;
-            nothing is sent anywhere. You will review the parsed table against the page before
-            it enters the draft.
-          </p>
+          <p className="text-sm text-muted-foreground">{t.attendanceImport.body}</p>
 
           <div className="flex flex-wrap items-center gap-3">
             <input
               type="file"
               accept="application/pdf"
               disabled={busy}
-              className="text-sm file:mr-3 file:rounded-md file:border file:bg-background file:px-3 file:py-1.5 file:text-sm"
+              className="text-sm file:me-3 file:rounded-md file:border file:bg-background file:px-3 file:py-1.5 file:text-sm"
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) void upload(file);
               }}
             />
             <Button variant="outline" onClick={startManual} disabled={busy}>
-              Enter by hand instead
+              {t.attendanceImport.byHand}
             </Button>
           </div>
 
-          {busy ? <p className="text-sm text-muted-foreground">Working…</p> : null}
+          {busy ? (
+            <p className="text-sm text-muted-foreground">{t.attendanceImport.working}</p>
+          ) : null}
           {notice ? <p className="text-sm text-emerald-700 dark:text-emerald-500">{notice}</p> : null}
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
           <p className="text-xs text-muted-foreground">
-            Current draft provenance: <strong>{draft.provenance.attendanceSource}</strong>
-            {draft.provenance.humanConfirmed ? " · confirmed by a human" : " · not yet confirmed"}
-            {draft.provenance.sourceFilename ? ` · ${draft.provenance.sourceFilename}` : ""}
+            {t.attendanceImport.provenance}{" "}
+            <strong dir="ltr">{draft.provenance.attendanceSource}</strong>
+            {" · "}
+            {draft.provenance.humanConfirmed
+              ? t.attendanceImport.confirmed
+              : t.attendanceImport.notConfirmed}
+            {draft.provenance.sourceFilename ? (
+              <>
+                {" · "}
+                <span dir="ltr">{draft.provenance.sourceFilename}</span>
+              </>
+            ) : null}
           </p>
         </CardContent>
       </Card>
@@ -267,33 +268,32 @@ export default function AttendancePage() {
       {proposal && !rows ? (
         <Card className="border-amber-500/50">
           <CardHeader>
-            <CardTitle className="text-base">Ask a model to describe this layout</CardTitle>
+            <CardTitle className="text-base">{t.attendanceImport.proposeCard}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm">
-              This is the only step that sends anything off this machine, and it is off by
-              default. The model is asked to describe <em>where the columns are</em>. It never
-              sees the roster and never returns one — the table is produced locally afterwards.
+              {t.attendanceImport.proposeBody.before}
+              <em>{t.attendanceImport.proposeBody.emphasis}</em>
+              {t.attendanceImport.proposeBody.after}
             </p>
 
             <div className="rounded-md border bg-muted/40 p-3">
               <p className="mb-2 text-xs font-medium">
-                Exactly what would be sent — {proposal.redactedCellCount} cells already
-                replaced with placeholders:
+                {t.attendanceImport.payloadHeading(proposal.redactedCellCount)}
               </p>
               <pre className="max-h-56 overflow-auto text-xs" dir="ltr">
-                {proposal.payload ?? "(nothing to send — no table-like rows found)"}
+                {proposal.payload ?? t.attendanceImport.nothingToSend}
               </pre>
             </div>
 
             {!proposal.enabled ? (
               <p className="text-sm text-muted-foreground">
-                Disabled. Set <code>COURSE_REPORT_ALLOW_PROFILE_PROPOSAL=1</code> to allow it.
+                {t.attendanceImport.disabled.before}
+                <code dir="ltr">COURSE_REPORT_ALLOW_PROFILE_PROPOSAL=1</code>
+                {t.attendanceImport.disabled.after}
               </p>
             ) : !proposal.hasCredentials ? (
-              <p className="text-sm text-muted-foreground">
-                Enabled, but no API credentials are configured.
-              </p>
+              <p className="text-sm text-muted-foreground">{t.attendanceImport.noCredentials}</p>
             ) : (
               <>
                 <label className="flex items-start gap-2 text-sm">
@@ -303,12 +303,10 @@ export default function AttendancePage() {
                     checked={consent}
                     onChange={(e) => setConsent(e.target.checked)}
                   />
-                  <span>
-                    I have read the payload above and agree to send it to Anthropic&apos;s API.
-                  </span>
+                  <span>{t.attendanceImport.consent}</span>
                 </label>
                 <Button onClick={() => void propose()} disabled={!consent || busy}>
-                  Propose a profile
+                  {t.attendanceImport.propose}
                 </Button>
               </>
             )}
@@ -322,11 +320,14 @@ export default function AttendancePage() {
           <Card className="min-w-0">
             <CardHeader>
               <CardTitle className="flex items-baseline justify-between text-base">
-                <span>Parsed table</span>
+                <span>{t.attendanceImport.parsedTable}</span>
                 <span className="text-xs font-normal text-muted-foreground">
                   {source === "manual"
-                    ? "manual entry"
-                    : `${profileId} · ${Math.round((confidence ?? 0) * 100)}% read`}
+                    ? t.attendanceImport.manualEntry
+                    : t.attendanceImport.profileRead(
+                        profileId ?? "",
+                        Math.round((confidence ?? 0) * 100),
+                      )}
                 </span>
               </CardTitle>
             </CardHeader>
@@ -334,7 +335,7 @@ export default function AttendancePage() {
               {warnings.length > 0 ? (
                 <div className="rounded-md border border-amber-500/40 p-3">
                   <p className="text-xs font-medium">
-                    {warnings.length} thing(s) to check:
+                    {t.attendanceImport.thingsToCheck(warnings.length)}
                   </p>
                   <ul className="mt-1 space-y-0.5 text-xs text-muted-foreground">
                     {warnings.slice(0, 8).map((w, i) => (
@@ -348,12 +349,12 @@ export default function AttendancePage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="min-w-48">Name</TableHead>
-                      <TableHead className="min-w-32">Department</TableHead>
+                      <TableHead className="min-w-48">{t.attendanceImport.name}</TableHead>
+                      <TableHead className="min-w-32">{t.attendanceImport.department}</TableHead>
                       {sessionDates.map((date, i) => (
                         <TableHead key={i} className="min-w-28">
                           <LtrInput
-                            aria-label={`Session ${i + 1} date`}
+                            aria-label={t.attendanceImport.sessionDate(i + 1)}
                             className="h-7 text-xs"
                             value={date}
                             onChange={(e) =>
@@ -371,14 +372,14 @@ export default function AttendancePage() {
                       <TableRow key={r}>
                         <TableCell>
                           <ArabicInput
-                            aria-label={`Name, row ${r + 1}`}
+                            aria-label={t.attendanceImport.nameRow(r + 1)}
                             value={row.name}
                             onChange={(e) => setRow(r, { name: e.target.value })}
                           />
                         </TableCell>
                         <TableCell>
                           <AutoInput
-                            aria-label={`Department, row ${r + 1}`}
+                            aria-label={t.attendanceImport.departmentRow(r + 1)}
                             value={row.department}
                             onChange={(e) => setRow(r, { department: e.target.value })}
                           />
@@ -386,16 +387,17 @@ export default function AttendancePage() {
                         {sessionDates.map((_, s) => (
                           <TableCell key={s} className="p-1">
                             <select
-                              aria-label={`Row ${r + 1}, session ${s + 1}`}
+                              aria-label={t.attendanceImport.cell(r + 1, s + 1)}
                               className={`w-full rounded-md border border-input bg-transparent px-1 py-1.5 text-xs ${
                                 row.marks[s] ? "" : "border-amber-500/60 text-muted-foreground"
                               }`}
                               value={row.marks[s] ?? ""}
                               onChange={(e) => setMark(r, s, e.target.value)}
                             >
+                              <option value="">{t.common.none}</option>
                               {STATUSES.map((status) => (
                                 <option key={status} value={status}>
-                                  {status === "" ? "—" : status}
+                                  {t.attendanceStatus[status]}
                                 </option>
                               ))}
                             </select>
@@ -425,7 +427,7 @@ export default function AttendancePage() {
                     )
                   }
                 >
-                  Add row
+                  {t.attendanceImport.addRow}
                 </Button>
                 <Button
                   variant="outline"
@@ -438,19 +440,19 @@ export default function AttendancePage() {
                     );
                   }}
                 >
-                  Add session
+                  {t.attendanceImport.addSession}
                 </Button>
                 <Button variant="ghost" onClick={() => setRows(null)}>
-                  Discard
+                  {t.common.discard}
                 </Button>
               </div>
 
               <div className="border-t pt-3">
                 <Button onClick={confirm} disabled={rows.every((r) => r.name.trim() === "")}>
-                  Confirm and write into the draft
+                  {t.attendanceImport.confirm}
                 </Button>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  This replaces the draft&apos;s participants and sessions.
+                  {t.attendanceImport.confirmNote}
                 </p>
               </div>
             </CardContent>
@@ -459,7 +461,7 @@ export default function AttendancePage() {
           {/* --- the page it came from --- */}
           <Card className="min-w-0">
             <CardHeader>
-              <CardTitle className="text-base">Source page</CardTitle>
+              <CardTitle className="text-base">{t.attendanceImport.sourcePage}</CardTitle>
             </CardHeader>
             <CardContent>
               {uploadId ? (
@@ -467,20 +469,18 @@ export default function AttendancePage() {
                   data={`/api/pdf/file/${uploadId}`}
                   type="application/pdf"
                   className="h-[70vh] w-full rounded-md border"
-                  aria-label="Uploaded attendance register"
+                  aria-label={t.attendanceImport.uploadedRegister}
                 >
                   <p className="p-4 text-sm text-muted-foreground">
-                    Your browser cannot display the PDF inline.{" "}
+                    {t.attendanceImport.cannotDisplay}{" "}
                     <a className="underline" href={`/api/pdf/file/${uploadId}`}>
-                      Open it in a new tab
+                      {t.attendanceImport.openInTab}
                     </a>
                     .
                   </p>
                 </object>
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  No document — this table is being entered by hand.
-                </p>
+                <p className="text-sm text-muted-foreground">{t.attendanceImport.noDocument}</p>
               )}
             </CardContent>
           </Card>

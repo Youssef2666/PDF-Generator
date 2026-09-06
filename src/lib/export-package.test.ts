@@ -46,7 +46,7 @@ const listOutput = async () => (await fs.readdir(scratch)).sort();
 
 describe("slugify", () => {
   it("prefers plain ASCII", () => {
-    expect(slugify("Al-Ufuq Industries")).toBe("al-ufuq-industries");
+    expect(slugify("Al-Jabal Al-Akhdar Industries")).toBe("al-jabal-al-akhdar-industries");
     expect(slugify("Modern Managerial Leadership Skills")).toBe(
       "modern-managerial-leadership-skills",
     );
@@ -55,7 +55,7 @@ describe("slugify", () => {
   it("keeps Arabic letters rather than producing an empty slug", () => {
     // An all-Arabic client would otherwise slug to "" and every export would
     // collide on the same directory name.
-    expect(slugify("شركة الأفق للصناعات")).toContain("شركة");
+    expect(slugify("شركة الجبل الأخضر للصناعات")).toContain("شركة");
   });
 
   it("trims separators and length", () => {
@@ -67,7 +67,7 @@ describe("slugify", () => {
 describe("packageDirName", () => {
   it("is <date>-<client>-<course>", () => {
     expect(packageDirName(draft, NOW)).toBe(
-      "2026-03-15-al-ufuq-industries-modern-managerial-leadership-skills",
+      "2026-03-15-al-jabal-al-akhdar-industries-modern-managerial-leadership-skills",
     );
   });
 

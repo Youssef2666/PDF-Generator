@@ -14,6 +14,7 @@ import { useState } from "react";
 
 import { useLoadedDraft } from "@/components/draft-provider";
 import { ArabicInput, AutoInput, LtrInput } from "@/components/fields";
+import { useT } from "@/components/locale-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,6 +27,8 @@ const OUTCOME_TONE: Record<Outcome, string> = {
   failed: "text-red-700 dark:text-red-400",
   incomplete: "text-muted-foreground",
 };
+
+const OUTCOMES: Outcome[] = ["passed", "failed", "incomplete"];
 
 /** Parse a pasted spreadsheet block into rows of numbers-or-null. */
 function parseTsv(text: string): Array<Array<number | null>> {
@@ -45,6 +48,7 @@ function parseTsv(text: string): Array<Array<number | null>> {
 
 export default function GradesPage() {
   const { draft, update } = useLoadedDraft();
+  const t = useT();
   const { gradeColumns, participants } = draft;
 
   const [paste, setPaste] = useState("");
@@ -61,6 +65,8 @@ export default function GradesPage() {
       ...d,
       gradeColumns: [
         ...d.gradeColumns,
+        // The label is Arabic whatever the UI language: it is printed in
+        // the report.
         { id: newRowId("g"), labelAr: "عنصر تقييم", labelEn: null, maxScore: 100, weight: 0 },
       ],
     }));
@@ -128,9 +134,9 @@ export default function GradesPage() {
       <Card>
         <CardHeader>
           <CardTitle>
-            Grade columns
-            <span className={`ml-2 text-sm font-normal ${weightTone}`}>
-              weights total {draft.computed.totalGradeWeight}
+            {t.grades.columnsCard}
+            <span className={`ms-2 text-sm font-normal ${weightTone}`}>
+              {t.grades.weightsTotal(draft.computed.totalGradeWeight)}
             </span>
           </CardTitle>
         </CardHeader>
@@ -139,10 +145,10 @@ export default function GradesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-56">Label (Arabic)</TableHead>
-                  <TableHead className="min-w-48">Label (English)</TableHead>
-                  <TableHead className="w-32">Max score</TableHead>
-                  <TableHead className="w-32">Weight</TableHead>
+                  <TableHead className="min-w-56">{t.grades.columns.labelAr}</TableHead>
+                  <TableHead className="min-w-48">{t.grades.columns.labelEn}</TableHead>
+                  <TableHead className="min-w-32">{t.grades.columns.maxScore}</TableHead>
+                  <TableHead className="min-w-32">{t.grades.columns.weight}</TableHead>
                   <TableHead className="w-16" />
                 </TableRow>
               </TableHeader>
@@ -150,7 +156,7 @@ export default function GradesPage() {
                 {gradeColumns.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
-                      No grade columns yet.
+                      {t.grades.noColumns}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -196,9 +202,9 @@ export default function GradesPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => removeColumn(column.id)}
-                          aria-label={`Remove ${column.labelAr}`}
+                          aria-label={t.grades.removeColumn(column.labelAr)}
                         >
-                          Remove
+                          {t.common.remove}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -208,7 +214,7 @@ export default function GradesPage() {
             </Table>
           </div>
           <Button variant="outline" onClick={addColumn}>
-            Add column
+            {t.grades.addColumn}
           </Button>
         </CardContent>
       </Card>
@@ -216,13 +222,10 @@ export default function GradesPage() {
       {gradeColumns.length > 0 && participants.length > 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle>Paste marks from a spreadsheet</CardTitle>
+            <CardTitle>{t.grades.pasteCard}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              One row per participant in the order shown below, one tab-separated column per
-              grade column. Blank cells clear a mark.
-            </p>
+            <p className="text-sm text-muted-foreground">{t.grades.pasteBody}</p>
             <Textarea
               dir="ltr"
               rows={4}
@@ -234,12 +237,10 @@ export default function GradesPage() {
             {parsed.length > 0 ? (
               <div className="space-y-2">
                 <p className="text-sm">
-                  {parsed.length} row(s) parsed against {participants.length} participant(s)
+                  {t.grades.pasteParsed(parsed.length, participants.length)}
                   {parsed.length !== participants.length ? (
                     <span className="text-amber-600 dark:text-amber-500">
-                      {" "}
-                      — counts differ, extra rows are ignored and missing rows are left
-                      unchanged.
+                      {t.grades.pasteMismatch}
                     </span>
                   ) : null}
                 </p>
@@ -247,7 +248,7 @@ export default function GradesPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Participant</TableHead>
+                        <TableHead>{t.grades.participant}</TableHead>
                         {gradeColumns.map((c) => (
                           <TableHead key={c.id} dir="auto">
                             {c.labelAr}
@@ -264,12 +265,14 @@ export default function GradesPage() {
                             return (
                               <TableCell key={c.id} className="tabular-nums">
                                 {parsed[i] === undefined ? (
-                                  <span className="text-muted-foreground">unchanged</span>
+                                  <span className="text-muted-foreground">
+                                    {t.common.unchanged}
+                                  </span>
                                 ) : value === null || value === undefined ? (
-                                  <span className="text-muted-foreground">—</span>
+                                  <span className="text-muted-foreground">{t.common.none}</span>
                                 ) : value > c.maxScore ? (
                                   <span className="text-amber-600 dark:text-amber-500">
-                                    {value} (over max {c.maxScore})
+                                    {t.grades.overMax(value, c.maxScore)}
                                   </span>
                                 ) : (
                                   value
@@ -283,9 +286,9 @@ export default function GradesPage() {
                   </Table>
                 </div>
                 <div className="flex gap-2">
-                  <Button onClick={applyPaste}>Apply to {parsed.length} row(s)</Button>
+                  <Button onClick={applyPaste}>{t.grades.apply(parsed.length)}</Button>
                   <Button variant="ghost" onClick={() => setPaste("")}>
-                    Cancel
+                    {t.common.cancel}
                   </Button>
                 </div>
               </div>
@@ -296,41 +299,44 @@ export default function GradesPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Marks and outcomes</CardTitle>
+          <CardTitle>{t.grades.marksCard}</CardTitle>
         </CardHeader>
         <CardContent>
           {gradeColumns.length === 0 || participants.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Add {gradeColumns.length === 0 ? "grade columns" : "participants"} first.
+              {t.grades.addFirst(gradeColumns.length === 0 ? "columns" : "participants")}
             </p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="sticky left-0 z-10 min-w-56 bg-background">
-                      Participant
+                    <TableHead className="sticky start-0 z-10 min-w-56 bg-background">
+                      {t.grades.participant}
                     </TableHead>
                     {gradeColumns.map((c) => (
                       <TableHead key={c.id} className="min-w-28 text-center" dir="auto">
                         <span className="block">{c.labelAr}</span>
-                        <span className="block text-xs font-normal text-muted-foreground">
-                          /{c.maxScore} · {c.weight}%
+                        <span
+                          className="block text-xs font-normal text-muted-foreground"
+                          dir="ltr"
+                        >
+                          {t.grades.columnMeta(c.maxScore, c.weight)}
                         </span>
                       </TableHead>
                     ))}
-                    <TableHead className="w-24 text-right">Total</TableHead>
-                    <TableHead className="w-24 text-right">Attendance</TableHead>
-                    <TableHead className="w-28">Outcome</TableHead>
-                    <TableHead className="w-36">Override</TableHead>
-                    <TableHead className="min-w-56">Override note</TableHead>
+                    <TableHead className="w-24 text-end">{t.grades.total}</TableHead>
+                    <TableHead className="w-24 text-end">{t.grades.attendance}</TableHead>
+                    <TableHead className="w-28">{t.grades.outcome}</TableHead>
+                    <TableHead className="w-36">{t.grades.override}</TableHead>
+                    <TableHead className="min-w-56">{t.grades.overrideNote}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {participants.map((p) => (
                     <TableRow key={p.id}>
                       <TableCell
-                        className="sticky left-0 z-10 bg-background font-medium"
+                        className="sticky start-0 z-10 bg-background font-medium"
                         dir="auto"
                       >
                         {p.nameAr}
@@ -342,7 +348,7 @@ export default function GradesPage() {
                             type="number"
                             min={0}
                             max={c.maxScore}
-                            aria-label={`${p.nameAr}, ${c.labelAr}`}
+                            aria-label={t.grades.markLabel(p.nameAr, c.labelAr)}
                             className="text-center"
                             value={p.grades[c.id] ?? ""}
                             onChange={(e) => setMark(p.id, c.id, e.target.value)}
@@ -350,50 +356,56 @@ export default function GradesPage() {
                         </TableCell>
                       ))}
 
-                      <TableCell className="text-right tabular-nums font-medium">
-                        {p.computed.totalScore ?? <span className="text-muted-foreground">—</span>}
+                      <TableCell className="text-end tabular-nums font-medium">
+                        {p.computed.totalScore ?? (
+                          <span className="text-muted-foreground">{t.common.none}</span>
+                        )}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">
-                        {p.computed.attendanceRate === null ? "—" : `${p.computed.attendanceRate}%`}
+                      <TableCell className="text-end tabular-nums text-muted-foreground">
+                        {p.computed.attendanceRate === null
+                          ? t.common.none
+                          : `${p.computed.attendanceRate}%`}
                       </TableCell>
 
                       <TableCell>
                         <span className={OUTCOME_TONE[p.computed.outcome]}>
-                          {p.computed.outcome}
+                          {t.outcome[p.computed.outcome]}
                         </span>
                         {p.computed.outcomeIsOverridden ? (
                           <span
                             className="block text-xs text-muted-foreground"
-                            title="The rules produced this before the override"
+                            title={t.grades.wasOutcomeTitle}
                           >
-                            was {p.computed.computedOutcome}
+                            {t.grades.wasOutcome(t.outcome[p.computed.computedOutcome])}
                           </span>
                         ) : null}
                       </TableCell>
 
                       <TableCell>
                         <select
-                          aria-label={`Override outcome for ${p.nameAr}`}
+                          aria-label={t.grades.overrideFor(p.nameAr)}
                           className="w-full rounded-md border border-input bg-transparent px-2 py-1.5 text-xs"
                           value={p.outcomeOverride ?? ""}
                           onChange={(e) => setOverride(p.id, e.target.value)}
                         >
-                          <option value="">No override</option>
-                          <option value="passed">Passed</option>
-                          <option value="failed">Failed</option>
-                          <option value="incomplete">Incomplete</option>
+                          <option value="">{t.grades.noOverride}</option>
+                          {OUTCOMES.map((outcome) => (
+                            <option key={outcome} value={outcome}>
+                              {t.grades.overrideOptions[outcome]}
+                            </option>
+                          ))}
                         </select>
                       </TableCell>
 
                       <TableCell>
                         {p.outcomeOverride ? (
                           <ArabicInput
-                            aria-label={`Override reason for ${p.nameAr}`}
+                            aria-label={t.grades.overrideReasonFor(p.nameAr)}
                             value={p.outcomeOverrideNote ?? ""}
                             onChange={(e) => setOverrideNote(p.id, e.target.value)}
                           />
                         ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
+                          <span className="text-xs text-muted-foreground">{t.common.none}</span>
                         )}
                       </TableCell>
                     </TableRow>

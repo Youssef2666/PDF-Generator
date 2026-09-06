@@ -9,25 +9,20 @@
  * option because "not yet recorded" is a real state that the checklist
  * counts and the attendance rate deliberately excludes.
  *
- * Every figure in the right-hand columns comes from compute.ts. Nothing on
+ * Every figure in the trailing columns comes from compute.ts. Nothing on
  * this screen works out a percentage.
  */
 
 import { useLoadedDraft } from "@/components/draft-provider";
 import { ArabicInput, AutoInput } from "@/components/fields";
+import { useT } from "@/components/locale-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { newRowId } from "@/lib/empty-draft";
 import type { AttendanceStatus, Participant } from "@/lib/schema";
 
-const STATUS_OPTIONS: Array<{ value: AttendanceStatus | ""; label: string }> = [
-  { value: "", label: "—" },
-  { value: "present", label: "Present" },
-  { value: "late", label: "Late" },
-  { value: "absent", label: "Absent" },
-  { value: "excused", label: "Excused" },
-];
+const STATUSES: AttendanceStatus[] = ["present", "late", "absent", "excused"];
 
 const STATUS_TONE: Record<AttendanceStatus, string> = {
   present: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400",
@@ -38,6 +33,7 @@ const STATUS_TONE: Record<AttendanceStatus, string> = {
 
 export default function ParticipantsPage() {
   const { draft, update } = useLoadedDraft();
+  const t = useT();
   const { participants, sessions } = draft;
 
   const setParticipant = <K extends keyof Participant>(
@@ -72,6 +68,8 @@ export default function ParticipantsPage() {
         ...d.participants,
         {
           id: newRowId("p"),
+          // The placeholder is Arabic whatever the UI language: the roster
+          // itself is Arabic by definition.
           nameAr: "مشارك جديد",
           nameEn: null,
           jobTitle: "",
@@ -117,9 +115,9 @@ export default function ParticipantsPage() {
       <Card>
         <CardHeader>
           <CardTitle>
-            Participants
-            <span className="ml-2 text-sm font-normal text-muted-foreground">
-              {draft.computed.participantCount} people
+            {t.participants.card}
+            <span className="ms-2 text-sm font-normal text-muted-foreground">
+              {t.participants.people(draft.computed.participantCount)}
             </span>
           </CardTitle>
         </CardHeader>
@@ -128,10 +126,10 @@ export default function ParticipantsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-56">Name (Arabic)</TableHead>
-                  <TableHead className="min-w-48">Name (Latin)</TableHead>
-                  <TableHead className="min-w-44">Job title</TableHead>
-                  <TableHead className="min-w-44">Department</TableHead>
+                  <TableHead className="min-w-56">{t.participants.columns.nameAr}</TableHead>
+                  <TableHead className="min-w-48">{t.participants.columns.nameEn}</TableHead>
+                  <TableHead className="min-w-44">{t.participants.columns.jobTitle}</TableHead>
+                  <TableHead className="min-w-44">{t.participants.columns.department}</TableHead>
                   <TableHead className="w-16" />
                 </TableRow>
               </TableHeader>
@@ -139,7 +137,7 @@ export default function ParticipantsPage() {
                 {participants.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center text-sm text-muted-foreground">
-                      No participants yet.
+                      {t.participants.noParticipants}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -174,9 +172,9 @@ export default function ParticipantsPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => removeParticipant(p.id)}
-                          aria-label={`Remove ${p.nameAr}`}
+                          aria-label={t.participants.removeParticipant(p.nameAr)}
                         >
-                          Remove
+                          {t.common.remove}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -186,53 +184,57 @@ export default function ParticipantsPage() {
             </Table>
           </div>
           <Button variant="outline" onClick={addParticipant}>
-            Add participant
+            {t.participants.addParticipant}
           </Button>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Attendance</CardTitle>
+          <CardTitle>{t.participants.attendance}</CardTitle>
         </CardHeader>
         <CardContent>
           {sessions.length === 0 || participants.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Add {sessions.length === 0 ? "sessions" : "participants"} before recording
-              attendance.
+              {t.participants.addBefore(sessions.length === 0 ? "sessions" : "participants")}
             </p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="sticky left-0 z-10 min-w-56 bg-background">
-                      Participant
+                    <TableHead className="sticky start-0 z-10 min-w-56 bg-background">
+                      {t.participants.participant}
                     </TableHead>
                     {sessions.map((s) => (
                       <TableHead key={s.id} className="min-w-28 text-center">
-                        <span className="block text-xs font-medium">S{s.index}</span>
-                        <span className="block text-xs font-normal text-muted-foreground tabular-nums">
+                        <span className="block text-xs font-medium">
+                          {t.participants.sessionShort(s.index)}
+                        </span>
+                        <span
+                          className="block text-xs font-normal text-muted-foreground tabular-nums"
+                          dir="ltr"
+                        >
                           {s.date.slice(5)}
                         </span>
                       </TableHead>
                     ))}
-                    <TableHead className="min-w-32 text-center">Fill row</TableHead>
-                    <TableHead className="min-w-24 text-right">Rate</TableHead>
-                    <TableHead className="min-w-24 text-right">Hours</TableHead>
+                    <TableHead className="min-w-32 text-center">{t.participants.fillRow}</TableHead>
+                    <TableHead className="min-w-24 text-end">{t.participants.rate}</TableHead>
+                    <TableHead className="min-w-24 text-end">{t.participants.hours}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {participants.map((p) => (
                     <TableRow key={p.id}>
                       <TableCell
-                        className="sticky left-0 z-10 bg-background font-medium"
+                        className="sticky start-0 z-10 bg-background font-medium"
                         dir="auto"
                       >
                         {p.nameAr}
                         {p.computed.lateCount > 0 ? (
-                          <span className="ml-2 text-xs font-normal text-amber-600 dark:text-amber-500">
-                            {p.computed.lateCount} late
+                          <span className="ms-2 text-xs font-normal text-amber-600 dark:text-amber-500">
+                            {t.participants.late(p.computed.lateCount)}
                           </span>
                         ) : null}
                       </TableCell>
@@ -242,16 +244,17 @@ export default function ParticipantsPage() {
                         return (
                           <TableCell key={s.id} className="p-1 text-center">
                             <select
-                              aria-label={`${p.nameAr}, session ${s.index}`}
+                              aria-label={t.participants.cellLabel(p.nameAr, s.index)}
                               className={`w-full rounded-md border border-input bg-transparent px-1 py-1.5 text-xs ${
                                 status ? STATUS_TONE[status] : "text-muted-foreground"
                               }`}
                               value={status ?? ""}
                               onChange={(e) => setAttendance(p.id, s.id, e.target.value)}
                             >
-                              {STATUS_OPTIONS.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                  {option.label}
+                              <option value="">{t.common.none}</option>
+                              {STATUSES.map((option) => (
+                                <option key={option} value={option}>
+                                  {t.attendanceStatus[option]}
                                 </option>
                               ))}
                             </select>
@@ -267,19 +270,19 @@ export default function ParticipantsPage() {
                             className="h-7 px-2 text-xs"
                             onClick={() => fillRow(p.id, "present")}
                           >
-                            All present
+                            {t.participants.allPresent}
                           </Button>
                         </div>
                       </TableCell>
 
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-end tabular-nums">
                         {p.computed.attendanceRate === null ? (
-                          <span className="text-muted-foreground">—</span>
+                          <span className="text-muted-foreground">{t.common.none}</span>
                         ) : (
                           `${p.computed.attendanceRate}%`
                         )}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                      <TableCell className="text-end tabular-nums text-muted-foreground">
                         {p.computed.attendedHours}
                       </TableCell>
                     </TableRow>

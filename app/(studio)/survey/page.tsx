@@ -12,6 +12,7 @@
 
 import { useLoadedDraft } from "@/components/draft-provider";
 import { ArabicInput, AutoInput, Field, LtrInput } from "@/components/fields";
+import { useT } from "@/components/locale-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -20,6 +21,7 @@ import type { SurveyQuestion } from "@/lib/schema";
 
 export default function SurveyPage() {
   const { draft, update } = useLoadedDraft();
+  const t = useT();
   const { survey } = draft;
   const ratings = Array.from({ length: survey.scaleMax }, (_, i) => i + 1);
 
@@ -67,6 +69,8 @@ export default function SurveyPage() {
           ...d.survey.questions,
           {
             id: newRowId("q"),
+            // Arabic whatever the UI language: the survey text is Arabic
+            // by definition.
             textAr: "سؤال جديد",
             textEn: null,
             tally: Array.from({ length: d.survey.scaleMax }, () => 0),
@@ -87,19 +91,23 @@ export default function SurveyPage() {
       <Card>
         <CardHeader>
           <CardTitle>
-            Survey
-            <span className="ml-2 text-sm font-normal text-muted-foreground">
+            {t.survey.card}
+            <span className="ms-2 text-sm font-normal text-muted-foreground">
               {survey.computed.overallAverage === null
-                ? "no responses yet"
-                : `overall ${survey.computed.overallAverage} / ${survey.scaleMax} · n=${survey.computed.responseCount}`}
+                ? t.survey.noResponses
+                : t.survey.overall(
+                    survey.computed.overallAverage,
+                    survey.scaleMax,
+                    survey.computed.responseCount,
+                  )}
             </span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <Field
-            label="Rating scale"
+            label={t.survey.scale}
             htmlFor="scaleMax"
-            hint="Number of points on the Likert scale. Lowering it drops the ratings above the new maximum."
+            hint={t.survey.scaleHint}
             className="max-w-48"
           >
             <LtrInput
@@ -116,22 +124,22 @@ export default function SurveyPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Questions and response tallies</CardTitle>
+          <CardTitle>{t.survey.questionsCard}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-72">Question (Arabic)</TableHead>
-                  <TableHead className="min-w-56">Question (English)</TableHead>
+                  <TableHead className="min-w-72">{t.survey.columns.questionAr}</TableHead>
+                  <TableHead className="min-w-56">{t.survey.columns.questionEn}</TableHead>
                   {ratings.map((rating) => (
                     <TableHead key={rating} className="w-20 text-center">
                       {rating}
                     </TableHead>
                   ))}
-                  <TableHead className="w-20 text-right">n</TableHead>
-                  <TableHead className="w-24 text-right">Average</TableHead>
+                  <TableHead className="w-20 text-end">{t.survey.columns.n}</TableHead>
+                  <TableHead className="w-24 text-end">{t.survey.columns.average}</TableHead>
                   <TableHead className="w-16" />
                 </TableRow>
               </TableHeader>
@@ -142,7 +150,7 @@ export default function SurveyPage() {
                       colSpan={ratings.length + 5}
                       className="text-center text-sm text-muted-foreground"
                     >
-                      No questions yet.
+                      {t.survey.noQuestions}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -168,7 +176,7 @@ export default function SurveyPage() {
                           <LtrInput
                             type="number"
                             min={0}
-                            aria-label={`${question.textAr}, rating ${rating}`}
+                            aria-label={t.survey.tallyLabel(question.textAr, rating)}
                             className="text-center"
                             value={question.tally[i] ?? 0}
                             onChange={(e) => setTally(question.id, i, e.target.value)}
@@ -176,16 +184,16 @@ export default function SurveyPage() {
                         </TableCell>
                       ))}
 
-                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                      <TableCell className="text-end tabular-nums text-muted-foreground">
                         {question.computed.responseCount}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums font-medium">
+                      <TableCell className="text-end tabular-nums font-medium">
                         {question.computed.average === null ? (
                           <span
                             className="text-xs font-normal text-amber-600 dark:text-amber-500"
-                            title="No responses. This renders as 'no data', not as zero."
+                            title={t.survey.noResponsesTitle}
                           >
-                            no responses
+                            {t.survey.noResponsesCell}
                           </span>
                         ) : (
                           question.computed.average
@@ -196,9 +204,9 @@ export default function SurveyPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => removeQuestion(question.id)}
-                          aria-label={`Remove question ${question.textAr}`}
+                          aria-label={t.survey.removeQuestion(question.textAr)}
                         >
-                          Remove
+                          {t.common.remove}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -208,7 +216,7 @@ export default function SurveyPage() {
             </Table>
           </div>
           <Button variant="outline" onClick={addQuestion}>
-            Add question
+            {t.survey.addQuestion}
           </Button>
         </CardContent>
       </Card>

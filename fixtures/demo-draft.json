@@ -7,10 +7,10 @@
     "titleAr": "مهارات القيادة الإدارية الحديثة",
     "titleEn": "Modern Managerial Leadership Skills",
     "code": "LDR-204",
-    "clientNameAr": "شركة الأفق للصناعات",
-    "clientNameEn": "Al-Ufuq Industries",
-    "trainerNameAr": "د. سامي الحارثي",
-    "trainerNameEn": "Dr. Sami Al-Harthi",
+    "clientNameAr": "شركة الجبل الأخضر للصناعات",
+    "clientNameEn": "Al-Jabal Al-Akhdar Industries",
+    "trainerNameAr": "د. سالم الطرابلسي",
+    "trainerNameEn": "Dr. Salem Al-Trabelsi",
     "venue": "قاعة التدريب الرئيسية — مقر العميل",
     "deliveryMode": "in-person",
     "startDate": "2026-02-08",
@@ -98,7 +98,7 @@
   "participants": [
     {
       "id": "p1",
-      "nameAr": "عبدالله بن ناصر القحطاني",
+      "nameAr": "عبدالسلام محمد الفيتوري",
       "nameEn": null,
       "jobTitle": "مدير عمليات",
       "department": "العمليات",
@@ -133,7 +133,7 @@
     },
     {
       "id": "p2",
-      "nameAr": "نورة عبدالعزيز الدوسري",
+      "nameAr": "خديجة عمر المصراتي",
       "nameEn": null,
       "jobTitle": "أخصائي موارد بشرية أول",
       "department": "الموارد البشرية",
@@ -203,7 +203,7 @@
     },
     {
       "id": "p4",
-      "nameAr": "فهد سعد العتيبي",
+      "nameAr": "عبدالحميد سالم الورفلي",
       "nameEn": null,
       "jobTitle": "مشرف إنتاج",
       "department": "الإنتاج",
@@ -238,7 +238,7 @@
     },
     {
       "id": "p5",
-      "nameAr": "هند محمد الشمري",
+      "nameAr": "سالمة عبدالله الدرسي",
       "nameEn": null,
       "jobTitle": "محلل مالي",
       "department": "المالية",
@@ -273,7 +273,7 @@
     },
     {
       "id": "p6",
-      "nameAr": "خالد إبراهيم الزهراني",
+      "nameAr": "خالد مفتاح الزنتاني",
       "nameEn": null,
       "jobTitle": "مهندس صيانة",
       "department": "الصيانة",
@@ -308,7 +308,7 @@
     },
     {
       "id": "p7",
-      "nameAr": "ريم فيصل المطيري",
+      "nameAr": "فاطمة بشير الغرياني",
       "nameEn": null,
       "jobTitle": "منسق مشاريع",
       "department": "إدارة المشاريع",
@@ -343,7 +343,7 @@
     },
     {
       "id": "p8",
-      "nameAr": "ماجد عبدالرحمن الحربي",
+      "nameAr": "ميلاد رمضان الترهوني",
       "nameEn": null,
       "jobTitle": "رئيس قسم المشتريات",
       "department": "المشتريات",

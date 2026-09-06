@@ -52,7 +52,7 @@ const gradeColumns = [
 const rows: Row[] = [
   {
     id: "p1",
-    nameAr: "عبدالله بن ناصر القحطاني",
+    nameAr: "عبدالسلام محمد الفيتوري",
     nameEn: null,
     jobTitle: "مدير عمليات",
     department: "العمليات",
@@ -61,7 +61,7 @@ const rows: Row[] = [
   },
   {
     id: "p2",
-    nameAr: "نورة عبدالعزيز الدوسري",
+    nameAr: "خديجة عمر المصراتي",
     nameEn: null,
     jobTitle: "أخصائي موارد بشرية أول",
     department: "الموارد البشرية",
@@ -83,7 +83,7 @@ const rows: Row[] = [
   {
     // Late at every session: attends fully, and the attendance rate says so.
     id: "p4",
-    nameAr: "فهد سعد العتيبي",
+    nameAr: "عبدالحميد سالم الورفلي",
     nameEn: null,
     jobTitle: "مشرف إنتاج",
     department: "الإنتاج",
@@ -92,7 +92,7 @@ const rows: Row[] = [
   },
   {
     id: "p5",
-    nameAr: "هند محمد الشمري",
+    nameAr: "سالمة عبدالله الدرسي",
     nameEn: null,
     jobTitle: "محلل مالي",
     department: "المالية",
@@ -102,7 +102,7 @@ const rows: Row[] = [
   {
     // Falls below the attendance threshold despite adequate marks.
     id: "p6",
-    nameAr: "خالد إبراهيم الزهراني",
+    nameAr: "خالد مفتاح الزنتاني",
     nameEn: null,
     jobTitle: "مهندس صيانة",
     department: "الصيانة",
@@ -112,7 +112,7 @@ const rows: Row[] = [
   {
     // Attends well, but the marks do not reach the threshold.
     id: "p7",
-    nameAr: "ريم فيصل المطيري",
+    nameAr: "فاطمة بشير الغرياني",
     nameEn: null,
     jobTitle: "منسق مشاريع",
     department: "إدارة المشاريع",
@@ -123,7 +123,7 @@ const rows: Row[] = [
     // Overridden: missed the final project for a documented reason and was
     // assessed separately. The computed outcome stays visible underneath.
     id: "p8",
-    nameAr: "ماجد عبدالرحمن الحربي",
+    nameAr: "ميلاد رمضان الترهوني",
     nameEn: null,
     jobTitle: "رئيس قسم المشتريات",
     department: "المشتريات",
@@ -173,10 +173,10 @@ function build(): DraftInput {
       titleAr: "مهارات القيادة الإدارية الحديثة",
       titleEn: "Modern Managerial Leadership Skills",
       code: "LDR-204",
-      clientNameAr: "شركة الأفق للصناعات",
-      clientNameEn: "Al-Ufuq Industries",
-      trainerNameAr: "د. سامي الحارثي",
-      trainerNameEn: "Dr. Sami Al-Harthi",
+      clientNameAr: "شركة الجبل الأخضر للصناعات",
+      clientNameEn: "Al-Jabal Al-Akhdar Industries",
+      trainerNameAr: "د. سالم الطرابلسي",
+      trainerNameEn: "Dr. Salem Al-Trabelsi",
       venue: "قاعة التدريب الرئيسية — مقر العميل",
       deliveryMode: "in-person",
       startDate: "2026-02-08",

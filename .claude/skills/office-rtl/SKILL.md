@@ -92,7 +92,7 @@ can reproduce the other's complaint.
 Put both of these in your test fixture on day one. They are the bugs that
 reach clients.
 
-**1. A Latin name in an RTL column.** A roster holds `عبدالله القحطاني` and
+**1. A Latin name in an RTL column.** A roster holds `عبدالسلام الفيتوري` and
 `Maria Santos` in the same column. Mark each run's direction from its
 *content*, not from the column:
 

@@ -106,7 +106,7 @@ test("an empty draft becomes a three-document package", async ({ page, request }
   }
 
   // The package names itself after the date, client and course.
-  expect(directories[0]).toMatch(/^\d{4}-\d{2}-\d{2}-al-ufuq-industries-/);
+  expect(directories[0]).toMatch(/^\d{4}-\d{2}-\d{2}-al-jabal-al-akhdar-industries-/);
 
   // report-data.json carries the whole draft, for provenance.
   const reportData = JSON.parse(

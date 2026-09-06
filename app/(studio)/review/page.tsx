@@ -17,10 +17,12 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { useDraft, useLoadedDraft } from "@/components/draft-provider";
+import { useT } from "@/components/locale-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { computeChecklist, type ChecklistItem } from "@/lib/compute";
+import { describeChecklistItem, type Dictionary } from "@/lib/i18n";
 
 const SECTION_HREF: Record<ChecklistItem["section"], string> = {
   course: "/course",
@@ -49,6 +51,7 @@ type FinalizeState =
  */
 function FinalizeCard({ ready }: { ready: boolean }) {
   const { saveState, flush, clearLocalDraft, recordExport } = useDraft();
+  const t = useT();
   const [state, setState] = useState<FinalizeState>({ phase: "idle" });
 
   const busy = state.phase === "running";
@@ -67,7 +70,7 @@ function FinalizeCard({ ready }: { ready: boolean }) {
       if (!response.ok) {
         setState({
           phase: "failed",
-          message: body?.error ?? `Export failed (HTTP ${response.status})`,
+          message: body?.error ?? t.review.exportFailedHttp(response.status),
           section: body?.section,
           failing: body?.failing,
         });
@@ -92,23 +95,21 @@ function FinalizeCard({ ready }: { ready: boolean }) {
     return (
       <Card className="border-emerald-600/40">
         <CardHeader>
-          <CardTitle>Report finalized</CardTitle>
+          <CardTitle>{t.review.finalized}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
           <p className="text-sm">
-            Written to{" "}
-            <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+            {t.review.writtenTo}{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5 text-xs" dir="ltr">
               output/{state.directory}/
             </code>
           </p>
-          <ul className="text-sm text-muted-foreground">
+          <ul className="text-sm text-muted-foreground" dir="ltr">
             {state.files.map((file) => (
               <li key={file}>· {file}</li>
             ))}
           </ul>
-          <p className="text-xs text-muted-foreground">
-            The draft has been cleared. Start a new report from any screen.
-          </p>
+          <p className="text-xs text-muted-foreground">{t.review.draftCleared}</p>
         </CardContent>
       </Card>
     );
@@ -117,29 +118,31 @@ function FinalizeCard({ ready }: { ready: boolean }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Finalize</CardTitle>
+        <CardTitle>{t.review.finalize}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          Renders the Word report, Excel workbook and PowerPoint deck into{" "}
-          <code className="rounded bg-muted px-1 py-0.5 text-xs">output/</code>, writes
-          report-data.json alongside them, and then clears the draft.
+          {t.review.finalizeBody.before}
+          <code className="rounded bg-muted px-1 py-0.5 text-xs" dir="ltr">
+            output/
+          </code>
+          {t.review.finalizeBody.after}
         </p>
 
         <Button onClick={() => void finalize()} disabled={!ready || busy || unsaved}>
           {busy
-            ? "Rendering…"
+            ? t.review.rendering
             : !ready
-              ? "Checklist incomplete"
+              ? t.review.checklistIncomplete
               : unsaved
-                ? "Waiting for save…"
-                : "Finalize report"}
+                ? t.review.waitingForSave
+                : t.review.finalizeReport}
         </Button>
 
         {state.phase === "failed" ? (
           <div className="space-y-1 rounded-md border border-destructive/40 p-3">
             <p className="text-sm font-medium text-destructive">
-              {state.section ? `${state.section} failed.` : "Export failed."}
+              {state.section ? t.review.sectionFailed(state.section) : t.review.exportFailed}
             </p>
             <p className="text-sm text-muted-foreground">{state.message}</p>
             {state.failing?.length ? (
@@ -149,9 +152,7 @@ function FinalizeCard({ ready }: { ready: boolean }) {
                 ))}
               </ul>
             ) : null}
-            <p className="text-xs text-muted-foreground">
-              Nothing was written and your draft is untouched.
-            </p>
+            <p className="text-xs text-muted-foreground">{t.review.nothingWritten}</p>
           </div>
         ) : null}
       </CardContent>
@@ -176,8 +177,48 @@ function Figure({ label, value, muted }: { label: string; value: string; muted?:
   );
 }
 
+function ChecklistRow({
+  item,
+  t,
+  linkLabel,
+  passTone,
+  failTone,
+}: {
+  item: ChecklistItem;
+  t: Dictionary;
+  linkLabel: string;
+  passTone: string;
+  failTone: string;
+}) {
+  const { label, detail } = describeChecklistItem(item, t);
+  return (
+    <li
+      className="flex items-start gap-3 px-4 py-3"
+      data-testid={`check-${item.id}`}
+      data-status={item.status}
+    >
+      <span aria-hidden className={item.status === "pass" ? passTone : failTone}>
+        {item.status === "pass" ? "✓" : "•"}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-sm text-muted-foreground">{detail}</p>
+      </div>
+      {item.status === "fail" ? (
+        <Link
+          href={SECTION_HREF[item.section]}
+          className="shrink-0 text-sm underline underline-offset-4"
+        >
+          {linkLabel}
+        </Link>
+      ) : null}
+    </li>
+  );
+}
+
 export default function ReviewPage() {
   const { draft } = useLoadedDraft();
+  const t = useT();
   const checklist = computeChecklist(draft);
   const c = draft.computed;
 
@@ -189,7 +230,7 @@ export default function ReviewPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Readiness</span>
+            <span>{t.review.readiness}</span>
             <span
               className={
                 checklist.ready
@@ -199,83 +240,39 @@ export default function ReviewPage() {
               data-testid="readiness"
               data-ready={checklist.ready}
             >
-              {checklist.ready
-                ? "All required items pass"
-                : `${checklist.requiredFailing} required item(s) outstanding`}
+              {checklist.ready ? t.review.allPass : t.review.outstanding(checklist.requiredFailing)}
             </span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-background">
             {required.map((item) => (
-              <li
+              <ChecklistRow
                 key={item.id}
-                className="flex items-start gap-3 px-4 py-3"
-                data-testid={`check-${item.id}`}
-                data-status={item.status}
-              >
-                <span
-                  aria-hidden
-                  className={
-                    item.status === "pass"
-                      ? "mt-0.5 text-emerald-600 dark:text-emerald-500"
-                      : "mt-0.5 text-amber-600 dark:text-amber-500"
-                  }
-                >
-                  {item.status === "pass" ? "✓" : "•"}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{item.label}</p>
-                  <p className="text-sm text-muted-foreground">{item.detail}</p>
-                </div>
-                {item.status === "fail" ? (
-                  <Link
-                    href={SECTION_HREF[item.section]}
-                    className="shrink-0 text-sm underline underline-offset-4"
-                  >
-                    Fix
-                  </Link>
-                ) : null}
-              </li>
+                item={item}
+                t={t}
+                linkLabel={t.review.fix}
+                passTone="mt-0.5 text-emerald-600 dark:text-emerald-500"
+                failTone="mt-0.5 text-amber-600 dark:text-amber-500"
+              />
             ))}
           </ul>
 
           {advisory.length > 0 ? (
             <div className="space-y-2">
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Advisory — reported, does not block finalize
+                {t.review.advisory}
               </p>
               <ul className="divide-y divide-border overflow-hidden rounded-xl border border-dashed border-border bg-background">
                 {advisory.map((item) => (
-                  <li
+                  <ChecklistRow
                     key={item.id}
-                    className="flex items-start gap-3 px-4 py-3"
-                    data-testid={`check-${item.id}`}
-                    data-status={item.status}
-                  >
-                    <span
-                      aria-hidden
-                      className={
-                        item.status === "pass"
-                          ? "mt-0.5 text-emerald-600 dark:text-emerald-500"
-                          : "mt-0.5 text-muted-foreground"
-                      }
-                    >
-                      {item.status === "pass" ? "✓" : "•"}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">{item.label}</p>
-                      <p className="text-sm text-muted-foreground">{item.detail}</p>
-                    </div>
-                    {item.status === "fail" ? (
-                      <Link
-                        href={SECTION_HREF[item.section]}
-                        className="shrink-0 text-sm underline underline-offset-4"
-                      >
-                        Review
-                      </Link>
-                    ) : null}
-                  </li>
+                    item={item}
+                    t={t}
+                    linkLabel={t.review.reviewLink}
+                    passTone="mt-0.5 text-emerald-600 dark:text-emerald-500"
+                    failTone="mt-0.5 text-muted-foreground"
+                  />
                 ))}
               </ul>
             </div>
@@ -285,37 +282,34 @@ export default function ReviewPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Computed figures</CardTitle>
+          <CardTitle>{t.review.figures}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Every figure below is produced by compute.ts and stored in the draft. The exported
-            documents render these same values.
-          </p>
+          <p className="text-sm text-muted-foreground">{t.review.figuresBody}</p>
           <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            <Figure label="Participants" value={String(c.participantCount)} />
-            <Figure label="Sessions" value={String(c.sessionCount)} />
-            <Figure label="Total hours" value={String(c.totalHours)} />
-            <Figure label="Grade weight" value={String(c.totalGradeWeight)} />
-            <Figure label="Passed" value={String(c.passedCount)} />
-            <Figure label="Failed" value={String(c.failedCount)} />
+            <Figure label={t.review.figure.participants} value={String(c.participantCount)} />
+            <Figure label={t.review.figure.sessions} value={String(c.sessionCount)} />
+            <Figure label={t.review.figure.totalHours} value={String(c.totalHours)} />
+            <Figure label={t.review.figure.gradeWeight} value={String(c.totalGradeWeight)} />
+            <Figure label={t.review.figure.passed} value={String(c.passedCount)} />
+            <Figure label={t.review.figure.failed} value={String(c.failedCount)} />
             <Figure
-              label="Incomplete"
+              label={t.review.figure.incomplete}
               value={String(c.incompleteCount)}
               muted={c.incompleteCount === 0}
             />
             <Figure
-              label="Avg attendance"
+              label={t.review.figure.avgAttendance}
               value={c.averageAttendanceRate === null ? "—" : `${c.averageAttendanceRate}%`}
               muted={c.averageAttendanceRate === null}
             />
             <Figure
-              label="Avg score"
+              label={t.review.figure.avgScore}
               value={c.averageTotalScore === null ? "—" : String(c.averageTotalScore)}
               muted={c.averageTotalScore === null}
             />
             <Figure
-              label="Survey average"
+              label={t.review.figure.surveyAverage}
               value={
                 draft.survey.computed.overallAverage === null
                   ? "—"
@@ -324,7 +318,7 @@ export default function ReviewPage() {
               muted={draft.survey.computed.overallAverage === null}
             />
             <Figure
-              label="Survey responses"
+              label={t.review.figure.surveyResponses}
               value={String(draft.survey.computed.responseCount)}
               muted={draft.survey.computed.responseCount === 0}
             />
@@ -334,37 +328,37 @@ export default function ReviewPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Outcomes by participant</CardTitle>
+          <CardTitle>{t.review.outcomesCard}</CardTitle>
         </CardHeader>
         <CardContent>
           {draft.participants.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No participants yet.</p>
+            <p className="text-sm text-muted-foreground">{t.review.noParticipants}</p>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Participant</TableHead>
-                    <TableHead className="text-right">Attendance</TableHead>
-                    <TableHead className="text-right">Score</TableHead>
-                    <TableHead>Outcome</TableHead>
+                    <TableHead>{t.review.participant}</TableHead>
+                    <TableHead className="text-end">{t.review.attendance}</TableHead>
+                    <TableHead className="text-end">{t.review.score}</TableHead>
+                    <TableHead>{t.review.outcome}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {draft.participants.map((p) => (
                     <TableRow key={p.id}>
                       <TableCell dir="auto">{p.nameAr}</TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-end tabular-nums">
                         {p.computed.attendanceRate === null ? "—" : `${p.computed.attendanceRate}%`}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="text-end tabular-nums">
                         {p.computed.totalScore ?? "—"}
                       </TableCell>
                       <TableCell>
-                        {p.computed.outcome}
+                        {t.outcome[p.computed.outcome]}
                         {p.computed.outcomeIsOverridden ? (
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            overridden from {p.computed.computedOutcome}
+                          <span className="ms-2 text-xs text-muted-foreground">
+                            {t.review.overriddenFrom(t.outcome[p.computed.computedOutcome])}
                           </span>
                         ) : null}
                       </TableCell>

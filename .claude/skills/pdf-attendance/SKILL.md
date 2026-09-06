@@ -146,7 +146,7 @@ Every confirmed table records how it got there, in `draft.provenance`:
 ```json
 {
   "attendanceSource": "pdf-committed-profile",
-  "profileId": "al-ufuq-register-v1",
+  "profileId": "al-jabal-al-akhdar-register-v1",
   "confidence": 1,
   "sourceFilename": "register.pdf",
   "extractedAt": "2026-03-02T00:00:00.000Z",

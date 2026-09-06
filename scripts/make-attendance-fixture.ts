@@ -49,12 +49,12 @@ interface Row {
  */
 const ROWS: Row[] = [
   {
-    name: "عبدالله بن ناصر القحطاني",
+    name: "عبدالسلام محمد الفيتوري",
     department: "العمليات",
     marks: ["present", "present", "present", "present", "present"],
   },
   {
-    name: "نورة عبدالعزيز الدوسري",
+    name: "خديجة عمر المصراتي",
     department: "الموارد البشرية",
     marks: ["present", "late", "present", "present", "present"],
   },
@@ -66,27 +66,27 @@ const ROWS: Row[] = [
     marks: ["present", "present", "late", "present", "present"],
   },
   {
-    name: "فهد سعد العتيبي",
+    name: "عبدالحميد سالم الورفلي",
     department: "الإنتاج",
     marks: ["late", "late", "late", "late", "late"],
   },
   {
-    name: "هند محمد الشمري",
+    name: "سالمة عبدالله الدرسي",
     department: "المالية",
     marks: ["present", "present", "excused", "present", "present"],
   },
   {
-    name: "خالد إبراهيم الزهراني",
+    name: "خالد مفتاح الزنتاني",
     department: "الصيانة",
     marks: ["present", "absent", "absent", "present", "absent"],
   },
   {
-    name: "ريم فيصل المطيري",
+    name: "فاطمة بشير الغرياني",
     department: "إدارة المشاريع",
     marks: ["present", "present", "present", "late", "present"],
   },
   {
-    name: "ماجد عبدالرحمن الحربي",
+    name: "ميلاد رمضان الترهوني",
     department: "المشتريات",
     marks: ["present", "present", "present", "absent", "absent"],
   },
@@ -131,7 +131,7 @@ async function main(): Promise<void> {
   // --- heading -------------------------------------------------------------
   drawText(page, "كشف الحضور والانصراف", NAME_X, 545, font, 18, rgb(0.12, 0.22, 0.39));
   drawText(page, "مهارات القيادة الإدارية الحديثة", NAME_X, 520, font, 12);
-  drawText(page, "شركة الأفق للصناعات", NAME_X, 500, font, 11);
+  drawText(page, "شركة الجبل الأخضر للصناعات", NAME_X, 500, font, 11);
   drawText(page, "LDR-204", 700, 545, font, 11);
 
   // --- header row ----------------------------------------------------------

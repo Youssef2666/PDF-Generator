@@ -13,6 +13,7 @@ import { useState } from "react";
 
 import { useLoadedDraft } from "@/components/draft-provider";
 import { ArabicInput, AutoInput, Field, LtrInput } from "@/components/fields";
+import { useT } from "@/components/locale-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -45,8 +46,8 @@ function datesInRange(start: string, end: string, skipWeekends: boolean): string
 
   while (cursor <= last && out.length < 366) {
     const day = cursor.getUTCDay();
-    // Friday (5) and Saturday (6) are the weekend across most of the Gulf,
-    // which is the context this tool is built for.
+    // Friday (5) and Saturday (6) are the weekend in Libya and across most
+    // of the Arab world, which is the context this tool is built for.
     if (!skipWeekends || (day !== 5 && day !== 6)) {
       out.push(cursor.toISOString().slice(0, 10));
     }
@@ -55,8 +56,11 @@ function datesInRange(start: string, end: string, skipWeekends: boolean): string
   return out;
 }
 
+const DELIVERY_MODES: Array<Course["deliveryMode"]> = ["in-person", "online", "blended"];
+
 export default function CoursePage() {
   const { draft, update } = useLoadedDraft();
+  const t = useT();
   const { course, sessions } = draft;
 
   const [genStart, setGenStart] = useState("09:00");
@@ -122,66 +126,66 @@ export default function CoursePage() {
     <div className="max-w-5xl space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Course</CardTitle>
+          <CardTitle>{t.course.card}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field label="Course title (Arabic)" htmlFor="titleAr">
+          <Field label={t.course.titleAr} htmlFor="titleAr">
             <ArabicInput
               id="titleAr"
               value={course.titleAr}
               onChange={(e) => setCourse("titleAr", e.target.value)}
             />
           </Field>
-          <Field label="Course title (English)" htmlFor="titleEn">
+          <Field label={t.course.titleEn} htmlFor="titleEn">
             <AutoInput
               id="titleEn"
               value={course.titleEn ?? ""}
               onChange={(e) => setCourse("titleEn", e.target.value || null)}
             />
           </Field>
-          <Field label="Client (Arabic)" htmlFor="clientNameAr">
+          <Field label={t.course.clientAr} htmlFor="clientNameAr">
             <ArabicInput
               id="clientNameAr"
               value={course.clientNameAr}
               onChange={(e) => setCourse("clientNameAr", e.target.value)}
             />
           </Field>
-          <Field label="Client (English)" htmlFor="clientNameEn">
+          <Field label={t.course.clientEn} htmlFor="clientNameEn">
             <AutoInput
               id="clientNameEn"
               value={course.clientNameEn ?? ""}
               onChange={(e) => setCourse("clientNameEn", e.target.value || null)}
             />
           </Field>
-          <Field label="Trainer (Arabic)" htmlFor="trainerNameAr">
+          <Field label={t.course.trainerAr} htmlFor="trainerNameAr">
             <ArabicInput
               id="trainerNameAr"
               value={course.trainerNameAr}
               onChange={(e) => setCourse("trainerNameAr", e.target.value)}
             />
           </Field>
-          <Field label="Trainer (English)" htmlFor="trainerNameEn">
+          <Field label={t.course.trainerEn} htmlFor="trainerNameEn">
             <AutoInput
               id="trainerNameEn"
               value={course.trainerNameEn ?? ""}
               onChange={(e) => setCourse("trainerNameEn", e.target.value || null)}
             />
           </Field>
-          <Field label="Course code" htmlFor="code">
+          <Field label={t.course.code} htmlFor="code">
             <LtrInput
               id="code"
               value={course.code ?? ""}
               onChange={(e) => setCourse("code", e.target.value || null)}
             />
           </Field>
-          <Field label="Venue" htmlFor="venue" hint="Mixed content — direction follows what you type.">
+          <Field label={t.course.venue} htmlFor="venue" hint={t.course.venueHint}>
             <AutoInput
               id="venue"
               value={course.venue}
               onChange={(e) => setCourse("venue", e.target.value)}
             />
           </Field>
-          <Field label="Delivery mode">
+          <Field label={t.course.deliveryMode}>
             <Select
               value={course.deliveryMode}
               onValueChange={(v) => setCourse("deliveryMode", v as Course["deliveryMode"])}
@@ -190,14 +194,16 @@ export default function CoursePage() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="in-person">In person</SelectItem>
-                <SelectItem value="online">Online</SelectItem>
-                <SelectItem value="blended">Blended</SelectItem>
+                {DELIVERY_MODES.map((mode) => (
+                  <SelectItem key={mode} value={mode}>
+                    {t.course.delivery[mode]}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </Field>
           <div className="grid grid-cols-2 gap-4">
-            <Field label="Start date" htmlFor="startDate">
+            <Field label={t.course.startDate} htmlFor="startDate">
               <LtrInput
                 id="startDate"
                 type="date"
@@ -205,7 +211,7 @@ export default function CoursePage() {
                 onChange={(e) => setCourse("startDate", e.target.value || null)}
               />
             </Field>
-            <Field label="End date" htmlFor="endDate">
+            <Field label={t.course.endDate} htmlFor="endDate">
               <LtrInput
                 id="endDate"
                 type="date"
@@ -219,14 +225,10 @@ export default function CoursePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Passing rule</CardTitle>
+          <CardTitle>{t.course.passingRule}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field
-            label="Minimum score"
-            htmlFor="minScore"
-            hint="Weighted total out of 100. Inclusive."
-          >
+          <Field label={t.course.minScore} htmlFor="minScore" hint={t.course.minScoreHint}>
             <LtrInput
               id="minScore"
               type="number"
@@ -242,9 +244,9 @@ export default function CoursePage() {
             />
           </Field>
           <Field
-            label="Minimum attendance %"
+            label={t.course.minAttendance}
             htmlFor="minAttendance"
-            hint="Both thresholds must be met to pass."
+            hint={t.course.minAttendanceHint}
           >
             <LtrInput
               id="minAttendance"
@@ -265,15 +267,14 @@ export default function CoursePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Generate sessions</CardTitle>
+          <CardTitle>{t.course.generate}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Creates one session per day across the course date range.{" "}
-            <strong>This replaces the current session list.</strong>
+            {t.course.generateBody} <strong>{t.course.generateWarning}</strong>
           </p>
           <div className="flex flex-wrap items-end gap-4">
-            <Field label="Daily start" htmlFor="genStart" className="w-32">
+            <Field label={t.course.dailyStart} htmlFor="genStart" className="w-32">
               <LtrInput
                 id="genStart"
                 type="time"
@@ -281,7 +282,7 @@ export default function CoursePage() {
                 onChange={(e) => setGenStart(e.target.value)}
               />
             </Field>
-            <Field label="Daily end" htmlFor="genEnd" className="w-32">
+            <Field label={t.course.dailyEnd} htmlFor="genEnd" className="w-32">
               <LtrInput
                 id="genEnd"
                 type="time"
@@ -298,17 +299,15 @@ export default function CoursePage() {
                 onChange={(e) => setSkipWeekends(e.target.checked)}
               />
               <Label htmlFor="skipWeekends" className="text-sm font-normal">
-                Skip Fri/Sat
+                {t.course.skipWeekends}
               </Label>
             </div>
             <Button onClick={generateSessions} disabled={!canGenerate || previewCount === 0}>
-              Generate {previewCount > 0 ? `${previewCount} sessions` : "sessions"}
+              {t.course.generateButton(previewCount)}
             </Button>
           </div>
           {!canGenerate ? (
-            <p className="text-sm text-amber-600 dark:text-amber-500">
-              Set the course start and end dates first.
-            </p>
+            <p className="text-sm text-amber-600 dark:text-amber-500">{t.course.setDatesFirst}</p>
           ) : null}
         </CardContent>
       </Card>
@@ -316,9 +315,9 @@ export default function CoursePage() {
       <Card>
         <CardHeader>
           <CardTitle>
-            Sessions
-            <span className="ml-2 text-sm font-normal text-muted-foreground">
-              {draft.computed.sessionCount} sessions · {draft.computed.totalHours} hours
+            {t.course.sessions}
+            <span className="ms-2 text-sm font-normal text-muted-foreground">
+              {t.course.sessionsSummary(draft.computed.sessionCount, draft.computed.totalHours)}
             </span>
           </CardTitle>
         </CardHeader>
@@ -327,12 +326,12 @@ export default function CoursePage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">#</TableHead>
-                  <TableHead className="w-40">Date</TableHead>
-                  <TableHead className="w-28">Start</TableHead>
-                  <TableHead className="w-28">End</TableHead>
-                  <TableHead className="w-24">Hours</TableHead>
-                  <TableHead>Topic (Arabic)</TableHead>
+                  <TableHead className="w-12">{t.course.columns.index}</TableHead>
+                  <TableHead className="w-40">{t.course.columns.date}</TableHead>
+                  <TableHead className="w-28">{t.course.columns.start}</TableHead>
+                  <TableHead className="w-28">{t.course.columns.end}</TableHead>
+                  <TableHead className="w-24">{t.course.columns.hours}</TableHead>
+                  <TableHead>{t.course.columns.topic}</TableHead>
                   <TableHead className="w-16" />
                 </TableRow>
               </TableHeader>
@@ -340,7 +339,7 @@ export default function CoursePage() {
                 {sessions.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center text-sm text-muted-foreground">
-                      No sessions yet.
+                      {t.course.noSessions}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -392,9 +391,9 @@ export default function CoursePage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => removeSession(session.id)}
-                          aria-label={`Remove session ${session.index}`}
+                          aria-label={t.course.removeSession(session.index)}
                         >
-                          Remove
+                          {t.common.remove}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -404,7 +403,7 @@ export default function CoursePage() {
             </Table>
           </div>
           <Button variant="outline" onClick={addSession}>
-            Add session
+            {t.course.addSession}
           </Button>
         </CardContent>
       </Card>

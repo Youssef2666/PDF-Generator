@@ -126,7 +126,7 @@ function ltr(text: string, profile: RenderProfile, extra: Partial<IRunOptions> =
 /**
  * Choose the run type from the content.
  *
- * A participant roster holds both "عبدالله القحطاني" and "Maria Santos" in
+ * A participant roster holds both "عبدالسلام الفيتوري" and "Maria Santos" in
  * the same column. Marking the Latin one as an Arabic run leaves it
  * reversed against its punctuation, so the decision is made per value.
  */
